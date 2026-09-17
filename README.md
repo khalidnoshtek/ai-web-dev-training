@@ -6,7 +6,7 @@ build, deploy and maintain modern websites with AI assistance.
 **Course interface: English. Video resources: Hindi.** Official documentation is linked in
 English because that is where it is authoritative and kept current.
 
-- **Live site:** see the GitHub Pages URL in this repository's About section
+- **Live site:** <https://khalidnoshtek.github.io/ai-web-dev-training/>
 - **Curriculum source of truth:** [`data/curriculum.json`](data/curriculum.json)
 - **Readable version:** [`CURRICULUM.md`](CURRICULUM.md) (generated — do not edit by hand)
 
