@@ -127,7 +127,7 @@
       ],
       "deliverable": "A one-page written note (English or Hindi) tracing a URL to a rendered page.",
       "quiz": {
-        "questions": 10,
+        "questions": 6,
         "topics": [
           "DNS",
           "HTTP status codes",
@@ -200,7 +200,7 @@
       ],
       "deliverable": "Two valid HTML pages committed to `web-dev-practice`.",
       "quiz": {
-        "questions": 15,
+        "questions": 6,
         "topics": [
           "Semantic tags",
           "Form inputs",
@@ -262,7 +262,7 @@
       ],
       "deliverable": "A styled profile page using CSS variables and no `!important`.",
       "quiz": {
-        "questions": 15,
+        "questions": 6,
         "topics": [
           "Specificity",
           "Box model",
@@ -331,7 +331,7 @@
       ],
       "deliverable": "A responsive multi-section page with zero horizontal scroll at 360px.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "Flexbox",
           "Grid",
@@ -405,7 +405,7 @@
       ],
       "deliverable": "A working to-do app that survives a page refresh.",
       "quiz": {
-        "questions": 20,
+        "questions": 7,
         "topics": [
           "DOM",
           "Events",
@@ -481,7 +481,7 @@
       ],
       "deliverable": "A live GitHub Pages URL plus a repo with at least one merged PR.",
       "quiz": {
-        "questions": 15,
+        "questions": 6,
         "topics": [
           "Git commands",
           "Branching",
@@ -547,7 +547,7 @@
       ],
       "deliverable": "A written 'AI usage rules' page for yourself.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "Context window",
           "Hallucination",
@@ -620,7 +620,7 @@
       ],
       "deliverable": "A personal prompt-template file with at least 5 templates you actually use.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "Prompt structure",
           "Iteration",
@@ -671,7 +671,7 @@
       ],
       "deliverable": "A before/after code review log showing which AI suggestions you rejected and why.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "AI-assisted workflow",
           "Review discipline",
@@ -731,7 +731,7 @@
       ],
       "deliverable": "A Claude Project containing your capstone brief and a generated build plan.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "Context management",
           "Projects",
@@ -824,7 +824,7 @@
       ],
       "deliverable": "A merged PR authored with Claude Code, plus a written note on one thing it got wrong.",
       "quiz": {
-        "questions": 12,
+        "questions": 6,
         "topics": [
           "Real CLI commands",
           "Plan mode",
@@ -875,7 +875,7 @@
       ],
       "deliverable": "A live 5-page site + a rejection log.",
       "quiz": {
-        "questions": 8,
+        "questions": 5,
         "topics": [
           "Workflow",
           "Review discipline",
@@ -947,7 +947,7 @@
       ],
       "deliverable": "A data-driven page with working loading and error states.",
       "quiz": {
-        "questions": 12,
+        "questions": 5,
         "topics": [
           "REST",
           "fetch",
@@ -1013,7 +1013,7 @@
       ],
       "deliverable": "A local WordPress site plus a client handover document.",
       "quiz": {
-        "questions": 10,
+        "questions": 4,
         "topics": [
           "CMS trade-offs",
           "Plugins",
@@ -1082,7 +1082,7 @@
       ],
       "deliverable": "A deployed Next.js site.",
       "quiz": {
-        "questions": 12,
+        "questions": 4,
         "topics": [
           "Components",
           "Hooks",
@@ -1139,7 +1139,7 @@
       ],
       "deliverable": "A live HTTPS site plus before/after Lighthouse screenshots.",
       "quiz": {
-        "questions": 10,
+        "questions": 5,
         "topics": [
           "Pages config",
           "DNS",
@@ -1209,7 +1209,7 @@
       ],
       "deliverable": "Lighthouse SEO ≥ 90 and Accessibility ≥ 90 on the capstone.",
       "quiz": {
-        "questions": 12,
+        "questions": 5,
         "topics": [
           "Meta tags",
           "Core Web Vitals",
@@ -1264,7 +1264,7 @@
       ],
       "deliverable": "A written XSS demo + fix, and a clean secrets audit.",
       "quiz": {
-        "questions": 12,
+        "questions": 5,
         "topics": [
           "XSS",
           "HTTPS",
@@ -1336,7 +1336,7 @@
       ],
       "deliverable": "Pass mark: practical complete and deployed, written ≥ 70%, both capstones live.",
       "quiz": {
-        "questions": 40,
+        "questions": 10,
         "topics": [
           "All core modules"
         ]

@@ -39,7 +39,7 @@ service cloud.firestore {
       // client cannot smuggle extra fields into the document.
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(
-             ['modules', 'videos', 'email', 'displayName', 'photoURL',
+             ['modules', 'videos', 'quizzes', 'email', 'displayName', 'photoURL',
               'updatedAt', 'certifiedAt'])
         && request.resource.data.modules is map
         && request.resource.data.videos is map;

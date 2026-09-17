@@ -3,6 +3,7 @@ import { isAdmin } from './admins.js';
 import { confetti } from './celebrate.js';
 import { icon, hydrateIcons } from './icons.js';
 import { xpFor, levelFor, badgesFor } from './game.js';
+import { startQuiz } from './quiz.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1';
 const LOCAL_KEY = 'aiwd.progress.v2';
@@ -15,7 +16,8 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 
 let DATA = null;
 let filter = 'all';
-let state = { modules: {}, videos: {}, certifiedAt: null };
+let state = { modules: {}, videos: {}, quizzes: {}, certifiedAt: null };
+let QUIZ = null;   // { meta, quizzes }
 let cloud = null;
 let saveTimer = null;
 
@@ -25,19 +27,35 @@ function readLocal() {
   try {
     const v2 = JSON.parse(localStorage.getItem(LOCAL_KEY));
     if (v2 && v2.modules) return { modules: v2.modules || {}, videos: v2.videos || {},
-                                   certifiedAt: v2.certifiedAt || null };
+                                   quizzes: v2.quizzes || {}, certifiedAt: v2.certifiedAt || null };
     const v1 = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    if (v1) return { modules: v1, videos: {}, certifiedAt: null };
+    if (v1) return { modules: v1, videos: {}, quizzes: {}, certifiedAt: null };
   } catch {}
-  return { modules: {}, videos: {}, certifiedAt: null };
+  return { modules: {}, videos: {}, quizzes: {}, certifiedAt: null };
 }
 const writeLocal = () => { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch {} };
 const merge = (a, b) => ({
   modules: { ...(a.modules || {}), ...(b.modules || {}) },
   videos: { ...(a.videos || {}), ...(b.videos || {}) },
+  // Per module, the higher score wins when merging devices.
+  quizzes: mergeQuizzes(a.quizzes, b.quizzes),
   // Keep the EARLIEST certification date across devices — the day they finished.
   certifiedAt: [a.certifiedAt, b.certifiedAt].filter(Boolean).sort()[0] || null
 });
+
+function mergeQuizzes(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    const prev = out[k];
+    out[k] = !prev ? v : {
+      best: Math.max(prev.best || 0, v.best || 0),
+      attempts: (prev.attempts || 0) + (v.attempts || 0),
+      passed: !!(prev.passed || v.passed),
+      lastAt: [prev.lastAt, v.lastAt].filter(Boolean).sort().pop() || ''
+    };
+  }
+  return out;
+}
 
 function setSync(kind, detail = '') {
   const el = $('#sync');
@@ -55,7 +73,7 @@ function persist() {
   saveTimer = setTimeout(async () => {
     try {
       await cloud.setDoc(cloud.doc(cloud.db, 'progress', cloud.uid), {
-        modules: state.modules, videos: state.videos,
+        modules: state.modules, videos: state.videos, quizzes: state.quizzes,
         certifiedAt: state.certifiedAt || '',
         email: cloud.email || '', displayName: cloud.displayName || '',
         photoURL: cloud.photoURL || '', updatedAt: new Date().toISOString()
@@ -150,7 +168,7 @@ function moduleHTML(m, i) {
       <div class="track ${done ? 'ok' : ''}"><i style="width:${done ? 100 : 0}%"></i></div>
       <div class="tags">
         ${m.topics.slice(0, 3).map(t => `<span class="tagm">${esc(shortTag(t))}</span>`).join('')}
-        ${m.quiz && m.quiz.questions ? `<span class="tagm">Quiz ${m.quiz.questions}Q</span>` : ''}
+        ${quizFor(m.id) ? `<span class="tagm">Quiz ${quizFor(m.id).length}Q</span>` : ''}
       </div>
 
       <div class="detail">
@@ -163,8 +181,11 @@ function moduleHTML(m, i) {
           <span class="ext">&#8599;</span></li>`).join('')}</ul>` : ''}
         <h4>Exercises</h4><ul>${m.exercises.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
         ${m.deliverable ? `<h4>Deliverable</h4><div class="callout ok">${esc(m.deliverable)}</div>` : ''}
-        <div style="margin-top:16px">
-          <button class="btn ${done ? '' : 'primary'} tick">${done ? 'Completed — undo' : 'Mark module complete'}</button>
+        <div style="margin-top:16px;display:flex;gap:9px;flex-wrap:wrap">
+          ${quizFor(m.id) ? `<button class="btn ${done ? '' : 'primary'} takequiz">
+              ${scoreOf(m.id) ? `Retake quiz — best ${scoreOf(m.id).best}%` : `Take quiz (${quizFor(m.id).length} questions)`}
+            </button>` : ''}
+          <button class="btn tick">${done ? 'Completed — undo' : 'Mark complete manually'}</button>
         </div>
       </div>
     </div>
@@ -245,6 +266,72 @@ function renderProgress() {
 }
 
 
+
+/* ----------------------------------------------------------------- quiz */
+
+const quizFor = id => (QUIZ && QUIZ.quizzes[String(id)]) || null;
+const scoreOf = id => state.quizzes[String(id)] || null;
+const passMark = () => (QUIZ && QUIZ.meta.passMark) || 70;
+
+function openQuiz(moduleId) {
+  const bank = quizFor(moduleId);
+  if (!bank) return;
+  const m = DATA.modules.find(x => x.id === Number(moduleId));
+  showView('v-quiz');
+  startQuiz($('#quiz-host'), {
+    moduleId, title: m.title, questions: bank, passMark: passMark(),
+    best: scoreOf(moduleId)?.best ?? null,
+    onFinish: ({ score, passed }) => {
+      const prev = scoreOf(moduleId) || { best: 0, attempts: 0, passed: false };
+      state.quizzes[String(moduleId)] = {
+        best: Math.max(prev.best || 0, score),
+        attempts: (prev.attempts || 0) + 1,
+        passed: prev.passed || passed,
+        lastAt: new Date().toISOString()
+      };
+      // Passing the quiz completes the module; failing never un-completes it.
+      const wasComplete = totals().complete;
+      if (passed) state.modules[moduleId] = true;
+      const justFinished = !wasComplete && totals().complete;
+      if (justFinished && !state.certifiedAt) state.certifiedAt = new Date().toISOString();
+      persist();
+      renderDash(); renderPath(); renderProgress(); renderLevel(); renderBadges(); renderCert(); renderScorecard();
+      if (justFinished) { confetti(); }
+    },
+    onExit: () => {
+      showView('v-modules');
+      const el = $(`.node[data-id="${moduleId}"]`);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ block: 'center' }); }
+    }
+  });
+}
+
+function renderScorecard() {
+  if (!QUIZ) return;
+  const rows = DATA.modules.filter(m => quizFor(m.id));
+  const taken = rows.filter(m => scoreOf(m.id));
+  const passed = rows.filter(m => scoreOf(m.id)?.passed);
+  const avg = taken.length
+    ? Math.round(taken.reduce((a, m) => a + scoreOf(m.id).best, 0) / taken.length) : 0;
+
+  $('#score-lead').innerHTML =
+    `<b>${passed.length} of ${rows.length}</b> quizzes passed &middot; average best score ` +
+    `<b>${avg}%</b> &middot; pass mark ${passMark()}%. Passing a quiz marks that module complete.`;
+
+  $('#scorecard').innerHTML = rows.map(m => {
+    const sc = scoreOf(m.id);
+    const cls = !sc ? 'untaken' : sc.passed ? 'passed' : 'attempted';
+    return `<div class="score-row ${cls}" data-quiz="${m.id}">
+      <span class="sn">${String(m.id).padStart(2, '0')}</span>
+      <span class="st"><b>${esc(m.title)}</b>
+        <span>${sc ? `${sc.attempts} attempt${sc.attempts === 1 ? '' : 's'} · ${quizFor(m.id).length} questions`
+                   : `${quizFor(m.id).length} questions · not attempted`}</span></span>
+      <span class="sv">${sc ? sc.best + '%' : 'Not taken'}</span>
+      <button class="btn sgo" data-quiz-go="${m.id}">${sc ? 'Retake' : 'Start'}</button>
+    </div>`;
+  }).join('');
+}
+
 /* -------------------------------------------------------- level & badges */
 
 function gameCtx() {
@@ -320,7 +407,7 @@ function renderCert() {
   $('#cert-id').textContent = certId();
 }
 
-function renderAll() { renderDash(); renderPath(); renderProgress(); renderLevel(); renderBadges(); renderCert(); }
+function renderAll() { renderDash(); renderPath(); renderProgress(); renderLevel(); renderBadges(); renderCert(); renderScorecard(); }
 
 /* ------------------------------------------------------------------ views */
 
@@ -354,6 +441,12 @@ document.addEventListener('click', e => {
     persist(); renderDash(); renderProgress(); renderLevel(); renderBadges(); renderCert();
     return;
   }
+  const tq = e.target.closest('.takequiz');
+  if (tq) { e.stopPropagation(); openQuiz(tq.closest('.node').dataset.id); return; }
+
+  const sgo = e.target.closest('[data-quiz-go]');
+  if (sgo) { openQuiz(sgo.dataset.quizGo); return; }
+
   const tick = e.target.closest('.tick');
   if (tick) {
     e.stopPropagation();
@@ -476,11 +569,12 @@ async function startAuth() {
     $('#nav-trainer').hidden = !isAdmin(user.email);
     try {
       const snap = await fs.getDoc(fs.doc(db, 'progress', user.uid));
-      const remote = snap.exists() ? snap.data() : { modules: {}, videos: {}, certifiedAt: null };
+      const remote = snap.exists() ? snap.data()
+                                   : { modules: {}, videos: {}, quizzes: {}, certifiedAt: null };
       const merged = merge(remote, readLocal());
       const changed = JSON.stringify(merged) !== JSON.stringify({
         modules: remote.modules || {}, videos: remote.videos || {},
-        certifiedAt: remote.certifiedAt || null });
+        quizzes: remote.quizzes || {}, certifiedAt: remote.certifiedAt || null });
       state = merged; writeLocal();
       showUser(user); showGate(false); renderAll();
       if (changed) persist(); else setSync('saved');
@@ -495,10 +589,13 @@ async function startAuth() {
 
 /* ------------------------------------------------------------------- boot */
 
-fetch('data/curriculum.json')
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(async d => {
+Promise.all([
+  fetch('data/curriculum.json').then(r => { if (!r.ok) throw new Error('curriculum HTTP ' + r.status); return r.json(); }),
+  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null)
+])
+  .then(async ([d, qz]) => {
     DATA = d;
+    QUIZ = qz;
     hydrateIcons();
     state = readLocal();
     const t = totals();
