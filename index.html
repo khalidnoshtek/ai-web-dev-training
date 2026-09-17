@@ -140,24 +140,49 @@
 
     <div id="cert-wrap" hidden>
       <div class="cert" id="cert">
-        <div class="cert-inner">
-          <div class="cert-brand">
-            <span class="logo"><img src="assets/noshtek-logo.svg" alt="Noshtek" width="26" height="26"></span>
-            <div><b>Noshtek Academy</b><span>Certificate of Completion</span></div>
-          </div>
+        <div class="cert-frame">
+          <span class="crn tl"></span><span class="crn tr"></span>
+          <span class="crn bl"></span><span class="crn br"></span>
+
+          <header class="cert-head">
+            <img class="cert-logo" src="assets/noshtek-logo.svg" alt="" width="42" height="42">
+            <div class="cert-org">
+              <b>Noshtek Academy</b>
+              <span>Whitefield &middot; Bengaluru &middot; India</span>
+            </div>
+          </header>
+
+          <p class="cert-kicker">Certificate of Completion</p>
+          <div class="cert-rule"><i></i><em>&#10022;</em><i></i></div>
+
           <p class="cert-pre">This is to certify that</p>
-          <p class="cert-name" id="cert-name">—</p>
+          <p class="cert-name" id="cert-name">&mdash;</p>
+
           <p class="cert-body">
-            has successfully completed the <b>AI-Assisted Web Developer</b> programme &mdash;
-            <span id="cert-detail"></span> &mdash; covering web fundamentals, HTML, CSS,
-            JavaScript, Git, prompt engineering, Claude Code, deployment, SEO and web security,
-            including two client-grade capstone projects.
+            has successfully completed the <b>AI-Assisted Web Developer</b> programme
+            &mdash; <span id="cert-detail"></span> &mdash; covering web fundamentals, HTML, CSS,
+            JavaScript, Git, prompt engineering, Claude Code, deployment, technical SEO and web
+            security, including two client-grade capstone projects delivered end to end.
           </p>
-          <div class="cert-foot">
-            <div><b id="cert-date">—</b><span>Date of completion</span></div>
-            <div><b id="cert-id">—</b><span>Certificate ID</span></div>
-            <div><b>Noshtek Academy</b><span>Issuing body</span></div>
+
+          <div class="cert-meta">
+            <div class="cert-sig">
+              <b id="cert-date">&mdash;</b>
+              <span>Date of completion</span>
+            </div>
+            <div class="cert-seal" aria-hidden="true">
+              <div class="seal-ring">
+                <img src="assets/noshtek-logo.svg" alt="" width="26" height="26">
+              </div>
+              <small>Verified</small>
+            </div>
+            <div class="cert-sig">
+              <b class="sig-line">Noshtek Academy</b>
+              <span>Issuing authority</span>
+            </div>
           </div>
+
+          <p class="cert-id">Certificate ID <b id="cert-id">&mdash;</b></p>
         </div>
       </div>
       <div class="no-print" style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">

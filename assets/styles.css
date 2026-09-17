@@ -235,39 +235,6 @@ body.locked{overflow:hidden}
   .l-when{display:none}
 }
 
-/* ------------------------------------------------------------- certificate */
-.cert{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
-  padding:8px;box-shadow:var(--shadow)}
-.cert-inner{border:2px solid var(--brand);border-radius:10px;padding:34px 30px;text-align:center;
-  background:linear-gradient(160deg,var(--primary-soft) 0%,transparent 42%)}
-.cert-brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px;text-align:left}
-.cert-brand b{display:block;font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
-.cert-brand span{display:block;font-size:.72rem;font-weight:700;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--primary)}
-.cert-pre{color:var(--text-2);font-size:.85rem;margin:0 0 8px;letter-spacing:.04em}
-.cert-name{font-size:clamp(1.6rem,5vw,2.3rem);font-weight:800;letter-spacing:-.03em;margin:0 0 18px;
-  padding-bottom:14px;border-bottom:1px solid var(--border);line-height:1.15}
-.cert-body{color:var(--text-2);font-size:.92rem;max-width:56ch;margin:0 auto 30px;line-height:1.7}
-.cert-body b{color:var(--text)}
-.cert-foot{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;text-align:center;
-  border-top:1px solid var(--border);padding-top:18px}
-.cert-foot > div{min-width:130px}
-.cert-foot b{display:block;font-size:.88rem;font-weight:700}
-.cert-foot span{display:block;font-size:.68rem;color:var(--text-3);text-transform:uppercase;
-  letter-spacing:.08em;margin-top:3px}
-.cert-foot #cert-id{font-family:var(--mono);font-size:.8rem}
-
-@media print{
-  @page{margin:12mm}
-  .topbar,.nav,.no-print,#gate{display:none !important}
-  body{background:#fff;color:#000;display:block}
-  main{padding:0}
-  .cert{border:0;box-shadow:none;padding:0}
-  .cert-inner{border-color:#ff8e01;background:none;padding:40px 34px}
-  .cert-name,.cert-brand b,.cert-body b,.cert-foot b{color:#000}
-  .cert-body,.cert-pre{color:#333}
-}
-
 /* -------------------------------------------------------------- icons */
 .ic{display:block;flex:none}
 .nav button span[data-icon]{display:grid;place-items:center}
@@ -299,3 +266,76 @@ body.locked{overflow:hidden}
 .badge.earned .bi{background:var(--brand);color:#000;border-color:var(--brand)}
 .badge.earned b{color:var(--text)}
 .badge.locked{opacity:.62}
+
+/* ------------------------------------------------------------- certificate */
+/* Rendered at A4 landscape proportions on screen, so what you see is what
+   prints. The print block below forces landscape regardless of browser default. */
+
+.cert{background:#fff;border-radius:var(--r-card);box-shadow:var(--shadow);padding:0;
+  aspect-ratio:297/210;width:100%;overflow:hidden}
+.cert-frame{position:relative;height:100%;margin:11px;border:2px solid var(--brand);
+  border-radius:4px;padding:3.2% 5%;display:flex;flex-direction:column;align-items:center;
+  text-align:center;color:#101623;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,142,1,.10),transparent 58%),
+    repeating-linear-gradient(45deg,rgba(255,142,1,.030) 0 2px,transparent 2px 9px),
+    #fff}
+.cert-frame::before{content:"";position:absolute;inset:6px;border:1px solid rgba(255,142,1,.45);
+  border-radius:2px;pointer-events:none}
+
+.crn{position:absolute;width:20px;height:20px;border:2px solid var(--brand);pointer-events:none}
+.crn.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.crn.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.crn.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.crn.br{bottom:12px;right:12px;border-left:0;border-top:0}
+
+.cert-head{display:flex;align-items:center;gap:10px;margin-bottom:1.6%}
+.cert-logo{display:block;flex:none}
+.cert-org{text-align:left;line-height:1.2}
+.cert-org b{display:block;font-size:1.05rem;font-weight:800;letter-spacing:-.01em;color:#101623}
+.cert-org span{display:block;font-size:.6rem;color:#6b7280;letter-spacing:.13em;text-transform:uppercase;margin-top:2px}
+
+.cert-kicker{font-size:.86rem;font-weight:800;letter-spacing:.42em;text-transform:uppercase;
+  color:var(--brand-deep);margin:0 0 8px;padding-left:.42em}
+.cert-rule{display:flex;align-items:center;gap:9px;width:min(320px,62%);margin:0 0 3%}
+.cert-rule i{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,142,1,.75),transparent)}
+.cert-rule em{color:var(--brand);font-style:normal;font-size:.7rem}
+
+.cert-pre{font-size:.76rem;color:#6b7280;letter-spacing:.17em;text-transform:uppercase;margin:0 0 1.4%}
+.cert-name{font-size:clamp(1.5rem,4.4vw,2.65rem);font-weight:800;letter-spacing:-.025em;
+  margin:0 0 2.4%;padding-bottom:1.4%;line-height:1.1;color:#101623;
+  border-bottom:1.5px solid rgba(16,22,35,.16);min-width:min(460px,72%)}
+.cert-body{font-size:clamp(.72rem,1.32vw,.88rem);color:#3f4654;max-width:62ch;margin:0 auto;
+  line-height:1.75}
+.cert-body b{color:#101623;font-weight:700}
+
+.cert-meta{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+  width:100%;margin-top:auto;padding-top:1.5%}
+.cert-sig{flex:1;min-width:110px}
+.cert-sig b{display:block;font-size:.85rem;font-weight:700;color:#101623;padding-bottom:5px;
+  border-bottom:1px solid rgba(16,22,35,.28)}
+.cert-sig .sig-line{font-family:var(--ui)}
+.cert-sig span{display:block;font-size:.58rem;color:#6b7280;text-transform:uppercase;
+  letter-spacing:.12em;margin-top:5px}
+.cert-seal{flex:none;display:grid;justify-items:center;gap:4px}
+.seal-ring{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  border:2px solid var(--brand);outline:1px solid rgba(255,142,1,.4);outline-offset:3px;
+  background:radial-gradient(circle,#fff 55%,rgba(255,142,1,.13))}
+.cert-seal small{font-size:.52rem;letter-spacing:.17em;text-transform:uppercase;color:var(--brand-deep);font-weight:800}
+.cert-id{font-family:var(--mono);font-size:.58rem;color:#6b7280;letter-spacing:.07em;margin:1.5% 0 0}
+.cert-id b{color:#101623;font-weight:700}
+
+@media print{
+  @page{size:A4 landscape;margin:0}
+  html,body{background:#fff !important}
+  .topbar,.nav,.no-print,#gate,.setup-note{display:none !important}
+  body{display:block;min-height:0}
+  main{padding:0;max-width:none}
+  .view:not(#v-cert){display:none !important}
+  .wrap{padding:0;max-width:none}
+  .cert{box-shadow:none;border-radius:0;width:100%;height:100vh;aspect-ratio:auto;
+    break-inside:avoid;page-break-inside:avoid}
+  .cert-frame{margin:7mm;height:calc(100vh - 14mm)}
+  /* keep the brand colours in the printed PDF */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+}
