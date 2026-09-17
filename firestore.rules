@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Progress documents are private to the learner who owns them.
+// Document id == the signed-in user's uid.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /progress/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['modules', 'videos', 'email', 'displayName', 'updatedAt'])
+        && request.resource.data.modules is map
+        && request.resource.data.videos is map;
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

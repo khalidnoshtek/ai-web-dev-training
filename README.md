@@ -45,6 +45,69 @@ rather than being silently patched. The significant ones:
 5. Removed: a "use Mandarin (Hindi) articles" instruction, a leftover drafting note naming the
    author, and a ₹50L+/yr salary framing that a first web-development course cannot deliver.
 
+## Google sign-in setup (one-time, console only)
+
+The site runs in **local mode** until this is done — progress saves to the browser and
+nothing breaks. These steps need your Google account, so they cannot be scripted.
+
+1. **Create a project** at <https://console.firebase.google.com> (a new one — do not reuse an
+   unrelated production project). Google Analytics can be left off.
+2. **Add a web app**: Project settings → Your apps → Web (`</>`). Copy the `firebaseConfig` object.
+3. **Paste it** into [`assets/firebase-config.js`](assets/firebase-config.js), replacing the
+   `REPLACE_ME` placeholders. These values are *not* secrets — Firebase web API keys are public
+   identifiers and are meant to ship in client code. Access is controlled by the security rules
+   in step 5.
+4. **Enable Google sign-in**: Authentication → Sign-in method → Google → Enable → set a support
+   email → Save. Then under Authentication → Settings → **Authorised domains**, add
+   `khalidnoshtek.github.io`. Without this, sign-in fails with `auth/unauthorized-domain` —
+   the site shows that exact message if it happens.
+5. **Create Firestore**: Build → Firestore Database → Create database → production mode →
+   region `asia-south1` (Mumbai). Then paste the contents of
+   [`firestore.rules`](firestore.rules) into the Rules tab and Publish. Those rules let each
+   signed-in user read and write **only their own** progress document, and nothing else.
+6. Commit and push. Sign-in is live.
+
+### What is stored
+
+One document per learner at `progress/{uid}`:
+
+```json
+{
+  "modules":  { "6": true },
+  "videos":   { "q8EevlEpQ2A": true },
+  "email":    "learner@example.com",
+  "displayName": "Learner Name",
+  "updatedAt": "2026-09-17T12:00:00.000Z"
+}
+```
+
+Name, email and photo are read from the Google profile purely to label progress. If the learner
+ticks modules before signing in, that local progress is **merged** into the account on first
+sign-in rather than being overwritten.
+
+### Trainer visibility
+
+The rules deliberately prevent one learner from reading another's document. To review progress
+yourself, either read the `progress` collection in the Firebase console, or have the learner use
+the **Export** button, which produces a dated JSON file.
+
+## Videos
+
+All 40 Hindi video resources are embedded and play inside the page via
+`youtube-nocookie.com` — the learner never leaves the site. Each card has its own
+**Mark watched** toggle that syncs with the rest of the progress.
+
+Players load only when the play button is pressed (a thumbnail facade), so opening a module
+does not pull in several megabytes of YouTube iframes.
+
+The 28 **documentation** links (MDN, Claude docs, GitHub Docs, OWASP, web.dev) still open in a
+new tab. That is not a shortcut: those sites send `X-Frame-Options`/`frame-ancestors` headers
+that refuse framing, so they cannot be embedded by anyone.
+
+Every embed is availability-checked. One playlist in Module 6
+(CodeWithHarry's Git series) returned "This video is unavailable" when framed and was replaced
+with Chai aur Code's and CodeWithHarry's single-video Git courses.
+
 ## Running it locally
 
 ```bash
@@ -66,17 +129,22 @@ The site reads the JSON directly, so it needs no build step.
 
 ## Progress tracking
 
-Progress is stored per-browser in `localStorage` under `aiwd.progress.v1`. It is not shared
-between devices and never leaves the machine. **Export progress** downloads a dated JSON file
-listing completed modules and hours for the trainer.
+With Google sign-in configured, progress lives in Firestore against the learner's account and
+follows them to any device. `localStorage` (`aiwd.progress.v2`) is kept as an offline cache and
+is merged into the account on sign-in, so nothing is lost. Progress saved under the older
+`aiwd.progress.v1` key is migrated automatically.
+
+**Export** downloads a dated JSON snapshot of completed modules, hours and videos watched.
 
 ## Structure
 
 ```
-index.html              the course site
-assets/styles.css       styling, light and dark
-assets/app.js           rendering, progress, filters, export
-data/curriculum.json    single source of truth
-tools/build-md.py       regenerates CURRICULUM.md from the JSON
-CURRICULUM.md           generated — do not edit by hand
+index.html                  the course site
+assets/styles.css           styling, light and dark
+assets/app.js               rendering, auth, cloud sync, video players, export
+assets/firebase-config.js   YOUR Firebase web config goes here
+firestore.rules             security rules — paste into the Firestore console
+data/curriculum.json        single source of truth
+tools/build-md.py           regenerates CURRICULUM.md from the JSON
+CURRICULUM.md               generated — do not edit by hand
 ```

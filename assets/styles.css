@@ -96,3 +96,52 @@ footer.site{border-top:1px solid var(--border);margin-top:52px;padding:22px 0 40
   .brand{width:100%;margin-bottom:4px}
   .res .kind{display:none}
 }
+
+/* ---------------------------------------------------------------- sign-in gate */
+body.locked{overflow:hidden}
+#gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:20px}
+#gate[hidden]{display:none}  /* id specificity beats the UA [hidden] rule, so restate it */
+[hidden]{display:none !important}
+.gate-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:420px;width:100%;text-align:center}
+.gate-mark{font-size:2.4rem;line-height:1;margin-bottom:12px}
+.gate-card h1{font-size:1.35rem;margin:0 0 10px;letter-spacing:-.02em}
+.gate-card p{color:var(--text-dim);font-size:.9rem;margin:0 0 20px}
+.gbtn{display:inline-flex;align-items:center;gap:10px;font:inherit;font-size:.92rem;font-weight:550;
+  background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:9px;
+  padding:11px 20px;cursor:pointer;width:100%;justify-content:center}
+.gbtn:hover{background:var(--surface-2)}
+.gate-err{color:var(--accent);font-size:.84rem;margin:14px 0 0;min-height:1em}
+.gate-fine{font-size:.76rem;color:var(--text-dim);margin:16px 0 0}
+
+/* ------------------------------------------------------------- account + sync */
+.account{display:inline-flex;align-items:center;gap:8px;font-size:.84rem}
+.avatar{width:26px;height:26px;border-radius:50%;border:1px solid var(--border)}
+.who{color:var(--text-dim);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sync{font-size:.74rem;color:var(--text-dim);padding:3px 9px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border)}
+.sync[data-kind="saved"]{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.sync[data-kind="error"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.sync[data-kind="local"]{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.sync:empty{display:none}
+
+.setup-note{background:var(--warn-soft);border:1px solid transparent;border-left:3px solid var(--warn);
+  border-radius:0 var(--radius) var(--radius) 0;padding:11px 14px;font-size:.86rem;margin:0 0 20px;color:var(--text)}
+
+/* ------------------------------------------------------------------- videos */
+.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.vid{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.vid.watched{border-color:var(--ok)}
+.vid-frame{position:relative;aspect-ratio:16/9;background:#000;cursor:pointer}
+.vid-frame iframe{width:100%;height:100%;border:0;display:block}
+.thumb{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-list{display:grid;place-items:center;background:linear-gradient(135deg,#3a2f2a,#1d2a33);color:#fff}
+.thumb-list span{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.play{position:absolute;inset:0;margin:auto;width:52px;height:52px;border-radius:50%;border:0;
+  background:rgba(0,0,0,.62);color:#fff;font-size:1.05rem;cursor:pointer;display:grid;place-items:center;
+  transition:background .15s,transform .15s}
+.play span{margin-left:3px}
+.vid-frame:hover .play{background:var(--accent);transform:scale(1.07)}
+.vid-meta{display:flex;align-items:center;gap:8px;padding:9px 11px;font-size:.84rem}
+.vid-meta b{flex:1;min-width:0;font-weight:550;line-height:1.35}
+.seen{font:inherit;font-size:.72rem;padding:4px 9px;border-radius:99px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text-dim);cursor:pointer;flex:none;white-space:nowrap}
+.seen[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok);border-color:transparent;font-weight:600}

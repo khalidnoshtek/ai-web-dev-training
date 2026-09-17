@@ -246,7 +246,8 @@ All totals above are computed from the per-module hours below. Do not hand-write
 
 | Lang | Resource | Type |
 |---|---|---|
-| HI | [Complete Git Tutorials For Beginners In Hindi — CodeWithHarry](https://www.youtube.com/playlist?list=PLu0W_9lII9agwhy658ZPA0MTStKUJTWPi) | playlist |
+| HI | [Complete Git and GitHub Course in Hindi — Chai aur Code](https://www.youtube.com/watch?v=q8EevlEpQ2A) | video |
+| HI | [Git Tutorial for Beginners: Learn Git in One Video — CodeWithHarry](https://www.youtube.com/watch?v=AB3J8ufDYHQ) | video |
 | HI | [Git & GitHub Tutorial For Beginners — हिंदी में (single video)](https://www.youtube.com/watch?v=gwWKnnCMQ5c) | video |
 | EN | [GitHub Docs — Configuring a publishing source for GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) | docs |
 

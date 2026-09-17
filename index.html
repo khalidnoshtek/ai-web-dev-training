@@ -4,18 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI-Assisted Web Developer</title>
-<meta name="description" content="A 21-module training programme taking an IT administrator to AI-assisted web developer. Course interface in English, video resources in Hindi.">
+<meta name="description" content="A 21-module training programme taking an IT administrator to AI-assisted web developer. English interface, Hindi videos embedded in the page, progress saved to your Google account.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127891;</text></svg>">
+<link rel="preconnect" href="https://i.ytimg.com">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
 
+<div id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-mark">&#127891;</div>
+    <h1>AI-Assisted Web Developer</h1>
+    <p>Sign in with Google so your module progress and watched videos are saved to your account and follow you to any device.</p>
+    <button id="signin" class="gbtn">
+      <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <p class="gate-err" id="gate-err"></p>
+    <p class="gate-fine">Only your name, email and profile photo are read, and only to label your progress. Nothing is shared.</p>
+  </div>
+</div>
+
 <header class="site">
   <div class="wrap hrow">
-    <div class="brand">AI-Assisted Web Developer<span>Interface in English &middot; video resources in Hindi</span></div>
+    <div class="brand">AI-Assisted Web Developer<span>English interface &middot; Hindi videos, played here</span></div>
+    <span id="sync" class="sync"></span>
+    <span id="account" class="account" hidden></span>
     <button class="btn" id="theme">Theme</button>
-    <button class="btn" id="reset">Reset</button>
-    <button class="btn primary" id="export">Export progress</button>
+    <button class="btn primary" id="export">Export</button>
   </div>
 </header>
 
@@ -23,7 +39,12 @@
 
   <div class="hero">
     <h1>From IT administrator to AI-assisted web developer</h1>
-    <p>Twenty-one modules covering web fundamentals, HTML, CSS, JavaScript, Git, prompt engineering, Claude Code and two client-grade capstone projects. Tick modules as you finish them; progress is saved in this browser and can be exported as JSON for your trainer.</p>
+    <p>Twenty-one modules covering web fundamentals, HTML, CSS, JavaScript, Git, prompt engineering, Claude Code and two client-grade capstone projects. Every Hindi video plays inside this page &mdash; open a module and press play.</p>
+  </div>
+
+  <div class="setup-note" id="setup-note" hidden>
+    <b>Local mode.</b> Google sign-in is not configured yet, so progress is being saved in this browser only.
+    Add your Firebase web config to <code>assets/firebase-config.js</code> to turn on accounts &mdash; setup steps are in the README.
   </div>
 
   <div class="stats" id="stats"></div>
@@ -43,7 +64,7 @@
     <p class="lead">Every figure on this page is computed from the per-module hours in <code>data/curriculum.json</code>. Nothing is hand-written, so the headline duration and the module list cannot drift apart.</p>
     <div class="fix">
       <b>Core track: 373 hours</b>
-      <p>That is roughly 25 weeks at 15 hrs/week, or 19 weeks at 20 hrs/week. The two electives (WordPress, React/Next.js) add 55 hours on top. Treat "3&ndash;4 months" as achievable only at 20+ hrs/week with both electives skipped.</p>
+      <p>That is roughly 25 weeks at 15 hrs/week, or 19 weeks at 20 hrs/week. The two electives (WordPress, React/Next.js) add 55 hours on top. Treat &ldquo;3&ndash;4 months&rdquo; as achievable only at 20+ hrs/week with both electives skipped.</p>
     </div>
   </section>
 
@@ -66,10 +87,10 @@
 
 <footer class="site">
   <div class="wrap">
-    Curriculum data last updated <span id="updated">&mdash;</span>. Progress is stored locally in this browser only &mdash; use <strong>Export progress</strong> to send a snapshot to your trainer.
+    Curriculum data last updated <span id="updated">&mdash;</span>. Videos are embedded from YouTube and play without leaving this site; documentation links open externally because those sites refuse to be framed.
   </div>
 </footer>
 
-<script src="assets/app.js"></script>
+<script type="module" src="assets/app.js"></script>
 </body>
 </html>
