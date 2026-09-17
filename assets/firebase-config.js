@@ -1,22 +1,20 @@
-// Firebase web config.
+// Firebase web config for project `aiwd-training` (owner: xdrkzx@gmail.com).
 //
-// These values are NOT secrets — Firebase web API keys are public identifiers and are
-// meant to ship in client code. Access is controlled by Firestore security rules
-// (see firestore.rules) and by the authorised-domains list in the Firebase console.
+// These values are NOT secrets. Firebase web API keys are public identifiers and are
+// meant to ship in client code — they identify the project, they do not authorise
+// anything. Access is controlled by the Firestore security rules in firestore.rules
+// and by the authorised-domains list in the Firebase console.
 //
-// To activate Google login, replace the placeholders below with the config from:
-//   Firebase console -> Project settings -> Your apps -> Web app -> SDK setup
-//
-// Until that is done the site runs in LOCAL MODE: progress is saved in this browser
-// only, exactly as before. Nothing breaks.
+// Regenerate with:
+//   firebase apps:sdkconfig WEB --project aiwd-training
 
 export const FIREBASE_CONFIG = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyC4ZXqMD91PQ8AMLOX6kEjAcaf9Wf3C7FE",
+  authDomain: "aiwd-training.firebaseapp.com",
+  projectId: "aiwd-training",
+  storageBucket: "aiwd-training.firebasestorage.app",
+  messagingSenderId: "249602187453",
+  appId: "1:249602187453:web:1b6223ddb16820690f17d4"
 };
 
 export const isConfigured = c =>
