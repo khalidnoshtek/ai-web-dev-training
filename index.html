@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI-Assisted Web Developer</title>
+<meta name="description" content="A 21-module training programme taking an IT administrator to AI-assisted web developer. Course interface in English, video resources in Hindi.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127891;</text></svg>">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap hrow">
+    <div class="brand">AI-Assisted Web Developer<span>Interface in English &middot; video resources in Hindi</span></div>
+    <button class="btn" id="theme">Theme</button>
+    <button class="btn" id="reset">Reset</button>
+    <button class="btn primary" id="export">Export progress</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>From IT administrator to AI-assisted web developer</h1>
+    <p>Twenty-one modules covering web fundamentals, HTML, CSS, JavaScript, Git, prompt engineering, Claude Code and two client-grade capstone projects. Tick modules as you finish them; progress is saved in this browser and can be exported as JSON for your trainer.</p>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="bar"><i></i></div>
+
+  <div class="controls">
+    <button class="chip" data-filter="all" aria-pressed="true">All modules</button>
+    <button class="chip" data-filter="core" aria-pressed="false">Core only</button>
+    <button class="chip" data-filter="elective" aria-pressed="false">Electives</button>
+    <button class="chip" data-filter="todo" aria-pressed="false">Not yet done</button>
+  </div>
+
+  <div id="modules"></div>
+
+  <section class="block">
+    <h2>How long this actually takes</h2>
+    <p class="lead">Every figure on this page is computed from the per-module hours in <code>data/curriculum.json</code>. Nothing is hand-written, so the headline duration and the module list cannot drift apart.</p>
+    <div class="fix">
+      <b>Core track: 373 hours</b>
+      <p>That is roughly 25 weeks at 15 hrs/week, or 19 weeks at 20 hrs/week. The two electives (WordPress, React/Next.js) add 55 hours on top. Treat "3&ndash;4 months" as achievable only at 20+ hrs/week with both electives skipped.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Corrections applied to the source research</h2>
+    <p class="lead">This curriculum was rebuilt from a research report that contained several factual and internal-consistency errors. Each one and its fix is recorded here rather than being quietly patched.</p>
+    <div id="fixes"></div>
+  </section>
+
+  <section class="block">
+    <h2>Assessment</h2>
+    <p class="lead">Certification requires all of the following, not just quiz marks.</p>
+    <div class="fix" style="border-left-color:var(--ok)">
+      <b>Pass criteria</b>
+      <p>All 19 core modules ticked &middot; both capstone sites live on HTTPS with public repos &middot; written exam &ge; 70% &middot; Lighthouse SEO and Accessibility &ge; 90 on the final capstone &middot; a rejection log showing AI output that was reviewed and overridden &middot; no secrets committed in any course repo.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    Curriculum data last updated <span id="updated">&mdash;</span>. Progress is stored locally in this browser only &mdash; use <strong>Export progress</strong> to send a snapshot to your trainer.
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
