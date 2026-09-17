@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Generate BRIEFS.md from data/briefs.json — learner-facing briefs plus the
-trainer key, clearly separated. data/briefs.json stays the single source of truth."""
+"""Generate BRIEFS.md from data/briefs.json.
+
+Learner-facing only. The marking keys (ambiguities, withheld facts, rubric) are NOT
+in this repository — they live in Firestore under `briefKeys`, trainer-read-only."""
 import json, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -10,7 +12,7 @@ L = []
 w = L.append
 w("# Capstone client briefs\n")
 w(f"> {d['meta']['note']}\n")
-w(f"**How to run these:** {d['meta']['howToUse']}\n")
+w(f"**Trainer key:** {d['meta'].get('trainerKey','')}\n")
 
 def bullets(title, items):
     if not items: return
@@ -39,18 +41,10 @@ for mid, b in d["briefs"].items():
     bullets("Constraints", b["constraints"])
     bullets("Deliverables", b["deliverables"])
 
-    w("### TRAINER KEY — do not give to the learner\n")
-    bullets("What they must surface before coding", b["ambiguities"])
-    w("**Facts to release only when asked**\n")
-    w("| If they ask about | Tell them |")
-    w("|---|---|")
-    for k, v in b["facts"].items(): w(f"| {k} | {v} |")
-    w("")
-    w("**Rubric**\n")
-    w("| Area | Weight | Criteria |")
-    w("|---|---|---|")
-    for r in b["rubric"]: w(f"| {r['area']} | {r['weight']}% | {r['criteria']} |")
-    w("")
+    w("### Trainer key\n")
+    w("The ambiguities, the facts withheld until asked, and the rubric are **not** in this")
+    w("repository. They live in the Firestore collection `briefKeys`, readable only by an")
+    w("allowlisted trainer, and are shown on the trainer dashboard.\n")
 
 (root / "BRIEFS.md").write_text("\n".join(L))
 print(f"BRIEFS.md written — {len(d['briefs'])} briefs")

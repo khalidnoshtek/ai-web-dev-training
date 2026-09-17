@@ -62,9 +62,10 @@
 
   <section style="margin-top:44px">
     <h2 style="margin-bottom:6px">Capstone marking keys</h2>
-    <p class="lead" style="margin-bottom:16px">Trainer-only. Learners see the client email and the
-    requirements; they do not see the ambiguities, the withheld facts or the rubric below. Release a
-    fact only when a learner actually asks the question that uncovers it.</p>
+    <p class="lead" style="margin-bottom:16px">Stored in Firestore under <code>briefKeys</code> and
+    readable only by an allowlisted trainer &mdash; they are not in the public site files. Learners
+    see the client email and the requirements only. Release a withheld fact when a learner actually
+    asks the question that uncovers it.</p>
     <div id="keys"></div>
   </section>
 </main>

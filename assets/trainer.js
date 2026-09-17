@@ -9,7 +9,6 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 
 let DATA = null;
 let QUIZ = null;
-let BRIEFS = null;
 let rows = [];
 let ctx = null;   // { db, fs, auth, a }
 
@@ -75,30 +74,89 @@ function ago(iso) {
 
 /* ------------------------------------------------- capstone marking keys */
 
-function renderKeys() {
+async function loadKeys() {
   const host = $('#keys');
-  if (!host) return;
-  if (!BRIEFS) { host.innerHTML = '<p class="muted">No briefs file found.</p>'; return; }
+  if (!host || !ctx) return;
+  const { fs, db } = ctx;
 
-  host.innerHTML = Object.entries(BRIEFS.briefs).map(([id, b]) => `
+  host.innerHTML = '<p class="muted">Loading marking keys…</p>';
+  try {
+    const snap = await fs.getDocs(fs.collection(db, 'briefKeys'));
+    const keys = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => Number(a.id) - Number(b.id));
+
+    if (!keys.length) { paintKeyUpload('No marking keys stored yet.'); return; }
+    paintKeys(keys);
+  } catch (err) {
+    console.error('Key load failed:', err);
+    host.innerHTML = `<div class="callout warn"><b>Could not load marking keys.</b>
+      ${esc(err.message)}</div>`;
+  }
+}
+
+function paintKeys(keys) {
+  $('#keys').innerHTML = keys.map(b => `
     <div class="key">
-      <h4>Module ${esc(id)} — ${esc(b.title)}</h4>
+      <h4>Module ${esc(b.id)} — ${esc(b.title || '')}</h4>
       <p class="muted" style="margin:0 0 4px;font-size:.85rem">
-        <b>${esc(b.client)}</b> · ${esc(b.sector)} · ${esc(b.budgetTime)}</p>
+        <b>${esc(b.client || '')}</b> · ${esc(b.sector || '')}</p>
 
       <h4>What they must surface before coding</h4>
-      <ul>${b.ambiguities.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+      <ul>${(b.ambiguities || []).map(a => `<li>${esc(a)}</li>`).join('')}</ul>
 
       <h4>Facts to release only on being asked</h4>
-      <dl>${Object.entries(b.facts).map(([k, v]) =>
+      <dl>${Object.entries(b.facts || {}).map(([k, v]) =>
         `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
 
       <h4>Rubric</h4>
-      <div class="rub">${b.rubric.map(r =>
+      <div class="rub">${(b.rubric || []).map(r =>
         `<div class="rub-row"><b>${esc(r.area)}</b><span class="rub-w">${r.weight}%</span>
          <span>${esc(r.criteria)}</span></div>`).join('')}</div>
-    </div>`).join('');
+    </div>`).join('') + keyUploadHTML('Replace the stored keys');
 }
+
+function paintKeyUpload(msg) {
+  $('#keys').innerHTML = `<div class="callout warn" style="margin-bottom:12px">
+    <b>${esc(msg)}</b> The marking keys are deliberately not in the public site files.
+    Upload <code>brief-keys.json</code> once — it is written to Firestore under
+    <code>briefKeys</code>, which only an allowlisted trainer can read.</div>`
+    + keyUploadHTML('Upload brief-keys.json');
+}
+
+function keyUploadHTML(label) {
+  return `<div class="keyup">
+    <label class="btn">${esc(label)}
+      <input type="file" id="keyfile" accept="application/json,.json" hidden>
+    </label>
+    <span id="keymsg" class="muted"></span>
+  </div>`;
+}
+
+async function uploadKeys(file) {
+  const msg = $('#keymsg');
+  const { fs, db } = ctx;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const keys = parsed.keys || parsed;
+    const ids = Object.keys(keys);
+    if (!ids.length) throw new Error('No keys found in that file.');
+
+    msg.textContent = `Writing ${ids.length} keys…`;
+    for (const id of ids) {
+      await fs.setDoc(fs.doc(db, 'briefKeys', String(id)), keys[id]);
+    }
+    msg.textContent = `Stored ${ids.length} marking keys.`;
+    await loadKeys();
+  } catch (err) {
+    console.error('Key upload failed:', err);
+    msg.textContent = `Upload failed: ${err.message}`;
+  }
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'keyfile' && e.target.files[0]) uploadKeys(e.target.files[0]);
+});
 
 /* ------------------------------------------------------------------- render */
 
@@ -324,20 +382,18 @@ async function start() {
         <a href="index.html">go to the course site</a>.</div>`;
       return;
     }
-    renderKeys();
+    loadKeys();
     loadLearners();
   });
 }
 
 Promise.all([
   fetch('data/curriculum.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
-  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null),
-  fetch('data/briefs.json').then(r => r.ok ? r.json() : null).catch(() => null)
+  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null)
 ])
-  .then(async ([d, qz, br]) => {
+  .then(async ([d, qz]) => {
     DATA = d;
     QUIZ = qz;
-    BRIEFS = br;
     hydrateIcons();
     if (!isConfigured(FIREBASE_CONFIG)) {
       showGate(false);

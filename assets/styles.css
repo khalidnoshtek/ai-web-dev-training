@@ -432,3 +432,8 @@ body.locked{overflow:hidden}
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-3)}
 .qchip.pass{background:var(--success-soft);border-color:var(--success);color:var(--success)}
 .qchip.fail{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+
+/* marking-key upload */
+.keyup{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:12px}
+.keyup label.btn{cursor:pointer}
+.keyup .muted{font-size:.82rem}
