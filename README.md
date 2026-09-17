@@ -85,11 +85,37 @@ Name, email and photo are read from the Google profile purely to label progress.
 ticks modules before signing in, that local progress is **merged** into the account on first
 sign-in rather than being overwritten.
 
-### Trainer visibility
+### Trainer dashboard
 
-The rules deliberately prevent one learner from reading another's document. To review progress
-yourself, either read the `progress` collection in the Firebase console, or have the learner use
-the **Export** button, which produces a dated JSON file.
+[`trainer.html`](trainer.html) is a separate page showing every learner: core percentage, modules
+done, hours, videos watched, last activity, and a per-module grid of what is and is not finished.
+It sorts by progress and exports the cohort to CSV.
+
+Access is enforced in `firestore.rules`, not in the page. Only an allowlisted trainer may `list`
+the `progress` collection, so one learner can never enumerate or read another's document. To
+change who counts as a trainer, edit `trainers()` at the top of
+[`firestore.rules`](firestore.rules) and redeploy:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+A non-allowlisted account that opens the dashboard gets a clear "This account is not a trainer"
+message rather than an empty page.
+
+## Design
+
+The interface follows the **AI Web Developer** LMS design artifact: Plus Jakarta Sans for UI,
+Hind for Devanagari, JetBrains Mono for code, indigo primary, 14px cards and 20px pills, with
+the learning-path timeline, stat cards and bottom navigation from that design.
+
+Screens in the design that are **not** built, because there is no data behind them: streaks,
+the quiz engine and scores, AI challenges, badges/certification, the prompt library and the
+glossary. The curriculum file records quiz *question counts* only — no question bank exists yet,
+so a quiz screen would have been a mockup rather than a feature.
+
+Built screens: sign-in, dashboard, learning path, module detail with video players, my progress,
+and the trainer dashboard.
 
 ## Videos
 
@@ -139,9 +165,11 @@ is merged into the account on sign-in, so nothing is lost. Progress saved under 
 ## Structure
 
 ```
-index.html                  the course site
-assets/styles.css           styling, light and dark
+index.html                  the course site (dashboard, path, progress)
+trainer.html                trainer dashboard — cohort progress, CSV export
+assets/styles.css           design system, light and dark
 assets/app.js               rendering, auth, cloud sync, video players, export
+assets/trainer.js           trainer dashboard logic
 assets/firebase-config.js   YOUR Firebase web config goes here
 firestore.rules             security rules — paste into the Firestore console
 data/curriculum.json        single source of truth

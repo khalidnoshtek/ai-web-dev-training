@@ -1,17 +1,45 @@
 rules_version = '2';
 
 // Progress documents are private to the learner who owns them.
-// Document id == the signed-in user's uid.
+// Trainers (allowlisted below) may read every learner's document but never write one.
+//
+// To change who is a trainer, edit trainers() and redeploy:
+//   firebase deploy --only firestore:rules
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /progress/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+    function trainers() {
+      return ['xdrkzx@gmail.com'];
+    }
 
-      allow create, update: if request.auth != null
-        && request.auth.uid == uid
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isTrainer() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in trainers();
+    }
+
+    match /progress/{uid} {
+      // A learner reads their own document; a trainer reads any of them.
+      allow get: if isOwner(uid) || isTrainer();
+
+      // Only trainers may enumerate the collection, so one learner can never
+      // discover or read another learner's progress.
+      allow list: if isTrainer();
+
+      // Writes are always the learner's own, and the shape is pinned so a
+      // client cannot smuggle extra fields into the document.
+      allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(
-             ['modules', 'videos', 'email', 'displayName', 'updatedAt'])
+             ['modules', 'videos', 'email', 'displayName', 'photoURL', 'updatedAt'])
         && request.resource.data.modules is map
         && request.resource.data.videos is map;
 

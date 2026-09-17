@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trainer Dashboard — AI Web Developer</title>
+<meta name="description" content="Trainer view of learner progress for the AI Web Developer programme.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%234f46e5'/><text x='50' y='70' font-size='56' text-anchor='middle'>&#128202;</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<div id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-brand">
+      <div class="logo">&#128202;</div>
+      <span class="eyebrow">Trainer access &middot; Noshtek IT</span>
+    </div>
+    <h1>Trainer Dashboard</h1>
+    <p class="gate-sub">Learner progress at a glance</p>
+    <p>Sign in with an allowlisted trainer account to review every learner on the AI Web Developer programme.</p>
+    <button id="signin" class="gbtn">
+      <span class="gwrap">
+        <svg viewBox="0 0 48 48" width="14" height="14" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      </span>
+      Continue with Google
+    </button>
+    <p class="gate-err" id="gate-err"></p>
+    <p class="gate-fine">Learners sign in on the <a href="index.html">course site</a> instead.</p>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="logo">&#128202;</div>
+    <div class="wordmark">Trainer Dashboard<span>AI Web Developer &middot; Noshtek IT</span></div>
+    <span id="account" class="account" hidden></span>
+    <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme">&#9681;</button>
+    <button class="icon-btn" id="refresh" title="Refresh" aria-label="Refresh">&#8635;</button>
+    <button class="btn primary" id="csv">Export CSV</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="head">
+    <div class="eyebrow">Cohort overview</div>
+    <h1>Learner progress</h1>
+    <p class="lead">Every learner who has signed in to the course site appears here. Figures are computed from the same curriculum file the learners see, so the two always agree.</p>
+  </div>
+
+  <div class="callout warn" id="setup-note" hidden style="margin-bottom:20px">
+    <b>Not configured.</b> Google sign-in is not set up yet, so there is no learner data to show.
+    Setup steps are in the README.
+  </div>
+
+  <div class="grid s2" id="summary" style="margin-bottom:22px"></div>
+  <div id="board"></div>
+</main>
+
+<nav class="nav">
+  <div class="wrap">
+    <button onclick="location.href='index.html'"><i>&#9632;</i>Course site</button>
+    <button aria-current="true"><i>&#9679;</i>Trainer</button>
+  </div>
+</nav>
+
+<script type="module" src="assets/trainer.js"></script>
+</body>
+</html>

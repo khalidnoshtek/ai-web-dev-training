@@ -5,36 +5,39 @@ const LOCAL_KEY = 'aiwd.progress.v2';
 const LEGACY_KEY = 'aiwd.progress.v1';
 
 const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 let DATA = null;
 let filter = 'all';
 let state = { modules: {}, videos: {} };
-let cloud = null;          // { db, uid, doc, setDoc, serverTimestamp } when signed in
+let cloud = null;
 let saveTimer = null;
 
-/* ---------------------------------------------------------------- storage */
+/* --------------------------------------------------------------- storage */
 
 function readLocal() {
   try {
     const v2 = JSON.parse(localStorage.getItem(LOCAL_KEY));
     if (v2 && v2.modules) return { modules: v2.modules || {}, videos: v2.videos || {} };
-    const v1 = JSON.parse(localStorage.getItem(LEGACY_KEY));   // migrate old format
+    const v1 = JSON.parse(localStorage.getItem(LEGACY_KEY));
     if (v1) return { modules: v1, videos: {} };
   } catch {}
   return { modules: {}, videos: {} };
 }
+const writeLocal = () => { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch {} };
+const merge = (a, b) => ({
+  modules: { ...(a.modules || {}), ...(b.modules || {}) },
+  videos: { ...(a.videos || {}), ...(b.videos || {}) }
+});
 
-function writeLocal() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch {}
-}
-
-function mergeProgress(a, b) {
-  return {
-    modules: { ...(a.modules || {}), ...(b.modules || {}) },
-    videos: { ...(a.videos || {}), ...(b.videos || {}) }
-  };
+function setSync(kind, detail = '') {
+  const el = $('#sync');
+  const map = { local: 'Local mode', saving: 'Saving…', saved: 'Saved', error: 'Save failed' };
+  el.textContent = map[kind] || '';
+  el.title = detail;
+  el.dataset.kind = kind;
 }
 
 function persist() {
@@ -45,11 +48,9 @@ function persist() {
   saveTimer = setTimeout(async () => {
     try {
       await cloud.setDoc(cloud.doc(cloud.db, 'progress', cloud.uid), {
-        modules: state.modules,
-        videos: state.videos,
-        email: cloud.email || '',
-        displayName: cloud.displayName || '',
-        updatedAt: new Date().toISOString()
+        modules: state.modules, videos: state.videos,
+        email: cloud.email || '', displayName: cloud.displayName || '',
+        photoURL: cloud.photoURL || '', updatedAt: new Date().toISOString()
       }, { merge: true });
       setSync('saved');
     } catch (err) {
@@ -59,143 +60,205 @@ function persist() {
   }, 600);
 }
 
-function setSync(kind, detail = '') {
-  const el = $('#sync');
-  if (!el) return;
-  const map = {
-    local: ['Local mode', 'Progress saved in this browser only'],
-    saving: ['Saving…', ''],
-    saved: ['Saved to your account', ''],
-    error: ['Save failed', detail]
+/* ----------------------------------------------------------------- totals */
+
+function totals() {
+  const mods = DATA.modules;
+  const core = mods.filter(m => m.track === 'core');
+  const coreHours = core.reduce((a, m) => a + m.hours, 0);
+  const doneCore = core.filter(m => state.modules[m.id]);
+  const videoCount = mods.reduce((a, m) => a + m.resources.filter(r => r.embed).length, 0);
+  const hours = doneCore.reduce((a, m) => a + m.hours, 0);
+  return {
+    mods, core, coreHours, coreCount: core.length,
+    doneCount: doneCore.length, hours,
+    pct: coreHours ? Math.round(hours / coreHours * 100) : 0,
+    electiveHours: mods.filter(m => m.track === 'elective').reduce((a, m) => a + m.hours, 0),
+    videoCount, videosSeen: Object.keys(state.videos).length,
+    perWeek: DATA.meta.hoursPerWeekDefault
   };
-  const [label, title] = map[kind] || ['', ''];
-  el.textContent = label;
-  el.title = title;
-  el.dataset.kind = kind;
 }
+
+const nextModule = () => DATA.modules.find(m => m.track === 'core' && !state.modules[m.id]);
 
 /* ------------------------------------------------------------------ video */
 
-function embedSrc(e, autoplay) {
-  const a = autoplay ? '&autoplay=1' : '';
-  return e.kind === 'playlist'
-    ? `https://www.youtube-nocookie.com/embed/videoseries?list=${e.id}&rel=0${a}`
-    : `https://www.youtube-nocookie.com/embed/${e.id}?rel=0&modestbranding=1${a}`;
-}
+const embedSrc = (e, auto) => e.kind === 'playlist'
+  ? `https://www.youtube-nocookie.com/embed/videoseries?list=${e.id}&rel=0${auto ? '&autoplay=1' : ''}`
+  : `https://www.youtube-nocookie.com/embed/${e.id}?rel=0&modestbranding=1${auto ? '&autoplay=1' : ''}`;
 
 function videoHTML(r) {
   const e = r.embed;
-  const watched = !!state.videos[e.id];
+  const seen = !!state.videos[e.id];
   const thumb = e.kind === 'video'
     ? `<img class="thumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/${e.id}/hqdefault.jpg">`
     : `<div class="thumb thumb-list" aria-hidden="true"><span>Playlist</span></div>`;
+  return `<div class="vid ${seen ? 'watched' : ''}" data-vid="${esc(e.id)}">
+    <div class="vid-frame" data-src="${esc(embedSrc(e, true))}">${thumb}
+      <button class="play" aria-label="Play ${esc(r.title)}">&#9654;</button></div>
+    <div class="vid-meta"><span class="lang hi">HI</span><b>${esc(r.title)}</b>
+      <button class="seen" aria-pressed="${seen}">${seen ? '&#10003; Watched' : 'Mark watched'}</button></div>
+  </div>`;
+}
 
-  return `<div class="vid ${watched ? 'watched' : ''}" data-vid="${esc(e.id)}" data-kind="${e.kind}">
-    <div class="vid-frame" data-src="${esc(embedSrc(e, true))}">
-      ${thumb}
-      <button class="play" aria-label="Play ${esc(r.title)}"><span>&#9654;</span></button>
-    </div>
-    <div class="vid-meta">
-      <span class="lang hi">HI</span>
-      <b>${esc(r.title)}</b>
-      <button class="seen" aria-pressed="${watched}">${watched ? '&#10003; Watched' : 'Mark watched'}</button>
+/* Turns a full topic line into a short chip label: take the first clause, then
+   trim on a word boundary rather than mid-word. */
+function shortTag(topic) {
+  let t = String(topic).split(/[:\u2014(]/)[0].trim();
+  if (t.length > 20) {
+    const head = t.split(',')[0].trim();
+    t = head.length >= 6 && head.length <= 22 ? head : t;
+  }
+  if (t.length > 22) {
+    const cut = t.slice(0, 22);
+    const sp = cut.lastIndexOf(' ');
+    t = (sp > 8 ? cut.slice(0, sp) : cut).replace(/[,;.\s]+$/, '') + '…';
+  }
+  return t.replace(/[,;]+$/, '');
+}
+
+/* ------------------------------------------------------------ module card */
+
+function moduleHTML(m, i) {
+  const done = !!state.modules[m.id];
+  const nxt = nextModule();
+  const isNow = !done && nxt && nxt.id === m.id;
+  const vids = m.resources.filter(r => r.embed);
+  const docs = m.resources.filter(r => !r.embed);
+  const status = done ? '<span class="pill done">Complete</span>'
+    : isNow ? '<span class="pill now">Up next</span>'
+    : m.track === 'elective' ? '<span class="pill el">Elective</span>' : '';
+
+  return `<div class="node ${done ? 'done' : ''} ${isNow ? 'now' : ''}" data-id="${m.id}">
+    <div class="dot">${done ? '&#10003;' : m.id}</div>
+    <div class="card">
+      <div class="m-top">
+        <h3>${esc(m.title)}</h3>
+        ${status}
+        <div class="m-pct">${m.hours}h<small>${vids.length} video${vids.length === 1 ? '' : 's'}</small></div>
+      </div>
+      <p class="m-goal">${esc(m.goal)}</p>
+      <div class="track ${done ? 'ok' : ''}"><i style="width:${done ? 100 : 0}%"></i></div>
+      <div class="tags">
+        ${m.topics.slice(0, 3).map(t => `<span class="tagm">${esc(shortTag(t))}</span>`).join('')}
+        ${m.quiz && m.quiz.questions ? `<span class="tagm">Quiz ${m.quiz.questions}Q</span>` : ''}
+      </div>
+
+      <div class="detail">
+        ${m.warning ? `<div class="callout warn" style="margin-bottom:6px"><b>Correction from the source research:</b> ${esc(m.warning)}</div>` : ''}
+        <h4>Topics</h4><ul>${m.topics.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+        ${vids.length ? `<h4>Watch here &mdash; Hindi</h4><div class="vids">${vids.map(videoHTML).join('')}</div>` : ''}
+        ${docs.length ? `<h4>Reference docs (open externally)</h4><ul class="docs">${docs.map(r => `
+          <li><span class="lang ${r.lang}">${r.lang.toUpperCase()}</span>
+          <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a>
+          <span class="ext">&#8599;</span></li>`).join('')}</ul>` : ''}
+        <h4>Exercises</h4><ul>${m.exercises.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+        ${m.deliverable ? `<h4>Deliverable</h4><div class="callout ok">${esc(m.deliverable)}</div>` : ''}
+        <div style="margin-top:16px">
+          <button class="btn ${done ? '' : 'primary'} tick">${done ? '&#10003; Completed — undo' : 'Mark module complete'}</button>
+        </div>
+      </div>
     </div>
   </div>`;
 }
 
 /* ----------------------------------------------------------------- render */
 
-function renderStats() {
-  const mods = DATA.modules;
-  const core = mods.filter(m => m.track === 'core');
-  const coreHours = core.reduce((a, m) => a + m.hours, 0);
-  const elHours = mods.filter(m => m.track === 'elective').reduce((a, m) => a + m.hours, 0);
-  const doneHours = mods.filter(m => state.modules[m.id]).reduce((a, m) => a + m.hours, 0);
-  const coreDone = core.filter(m => state.modules[m.id]).length;
-  const coreDoneHours = core.filter(m => state.modules[m.id]).reduce((a, m) => a + m.hours, 0);
-  const pct = coreHours ? Math.round(coreDoneHours / coreHours * 100) : 0;
-  const pw = DATA.meta.hoursPerWeekDefault;
-  const totalVids = mods.reduce((a, m) => a + m.resources.filter(r => r.embed).length, 0);
-  const seenVids = Object.keys(state.videos).length;
-
-  $('#stats').innerHTML = `
-    <div class="stat"><small>Core progress</small><b>${pct}%</b>${coreDone} of ${core.length} modules</div>
-    <div class="stat"><small>Hours logged</small><b>${doneHours}</b>of ${coreHours} core (+${elHours} elective)</div>
-    <div class="stat"><small>Videos watched</small><b>${seenVids}</b>of ${totalVids} embedded</div>
-    <div class="stat"><small>Core duration</small><b>${(coreHours / pw).toFixed(0)} wks</b>at ${pw} hrs/week</div>`;
-  $('.bar i').style.width = pct + '%';
-}
-
-function moduleHTML(m) {
-  const done = !!state.modules[m.id];
-  const vids = m.resources.filter(r => r.embed);
-  const docs = m.resources.filter(r => !r.embed);
-
-  const docList = docs.map(r => `
-    <li><span class="lang ${r.lang}">${r.lang.toUpperCase()}</span>
-      <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a>
-      <span class="kind">${esc(r.type)} &#8599;</span></li>`).join('');
-
-  return `<article class="mod ${done ? 'done' : ''}" data-id="${m.id}" data-track="${m.track}">
-    <div class="mod-head">
-      <button class="tick" role="checkbox" aria-checked="${done}" aria-label="Mark module ${m.id} complete">&#10003;</button>
-      <div class="mod-t">
-        <h3><span class="num">${String(m.id).padStart(2, '0')}</span> ${esc(m.title)}</h3>
-        <p>${esc(m.goal)}</p>
-        <div class="tags">
-          <span class="tag hrs">${m.hours} hrs</span>
-          ${m.track === 'elective' ? '<span class="tag el">Elective</span>' : '<span class="tag">Core</span>'}
-          ${vids.length ? `<span class="tag">${vids.length} video${vids.length > 1 ? 's' : ''}</span>` : ''}
-          ${m.quiz && m.quiz.questions ? `<span class="tag">Quiz &middot; ${m.quiz.questions} Q</span>` : ''}
-        </div>
-      </div>
-    </div>
-    <div class="mod-body">
-      ${m.warning ? `<div class="warnbox"><b>Correction from the source research:</b> ${esc(m.warning)}</div>` : ''}
-      <h4>Topics</h4><ul>${m.topics.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-      ${vids.length ? `<h4>Watch here &mdash; Hindi</h4><div class="vids">${vids.map(videoHTML).join('')}</div>` : ''}
-      ${docList ? `<h4>Reference documentation (opens externally)</h4><ul class="res">${docList}</ul>` : ''}
-      <h4>Exercises</h4><ul>${m.exercises.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
-      ${m.deliverable ? `<h4>Deliverable</h4><div class="deliver">${esc(m.deliverable)}</div>` : ''}
-    </div>
-  </article>`;
-}
-
-function render() {
-  const open = new Set([...document.querySelectorAll('.mod.open')].map(e => e.dataset.id));
+function renderPath() {
   const list = DATA.modules.filter(m =>
     filter === 'all' ? true :
     filter === 'todo' ? !state.modules[m.id] : m.track === filter);
-
-  $('#modules').innerHTML = list.map(moduleHTML).join('') ||
-    '<p style="color:var(--text-dim)">Nothing matches this filter.</p>';
-  open.forEach(id => {
-    const el = $(`.mod[data-id="${id}"]`);
-    if (el) el.classList.add('open');
-  });
-  renderStats();
+  const open = new Set($$('.node.open').map(e => e.dataset.id));
+  $('#path').innerHTML = list.map(moduleHTML).join('') ||
+    '<p class="muted">Nothing matches this filter.</p>';
+  open.forEach(id => $(`.node[data-id="${id}"]`)?.classList.add('open'));
+  $('#mod-title').textContent = `${DATA.modules.length} modules · IT admin to AI web developer`;
 }
 
-function renderFixes() {
+function statCard(k, val, of, sub, colour) {
+  return `<div class="card stat"><div class="k">${esc(k)}<i style="background:${colour}"></i></div>
+    <b>${val}${of ? `<span class="of"> / ${of}</span>` : ''}</b><small>${esc(sub)}</small></div>`;
+}
+
+function renderDash() {
+  const t = totals();
+  const name = cloud?.displayName?.split(' ')[0] || 'learner';
+  $('#dash-hi').textContent = `Welcome back, ${name}`;
+  $('#dash-eyebrow').textContent = `${t.doneCount} of ${t.coreCount} core modules · apprenticeship track`;
+
+  const nxt = nextModule();
+  $('#dash-sub').innerHTML = nxt
+    ? `Next up is <b>${esc(nxt.title)}</b> — ${esc(nxt.goal)}`
+    : 'Every core module is complete. Move on to the final assessment.';
+
+  $('#dash-cta').innerHTML = nxt
+    ? `<button class="btn primary" id="go-next">Continue learning &rarr;</button>`
+    : '';
+
+  $('#dash-stats').innerHTML = [
+    statCard('Core progress', t.pct + '%', '', `${t.doneCount} of ${t.coreCount} modules`, 'var(--primary)'),
+    statCard('Hours logged', t.hours, t.coreHours, 'core curriculum hours', 'var(--success)'),
+    statCard('Videos watched', t.videosSeen, t.videoCount, 'Hindi lessons, played in-page', 'var(--ai)'),
+    statCard('Remaining', Math.max(0, t.coreHours - t.hours), '', `≈ ${Math.ceil((t.coreHours - t.hours) / t.perWeek)} weeks at ${t.perWeek} hrs/week`, 'var(--warn)')
+  ].join('');
+
+  $('#dash-next').innerHTML = nxt
+    ? `<div class="path">${moduleHTML(nxt)}</div>`
+    : '<div class="card"><p class="muted" style="margin:0">Nothing left in the core track.</p></div>';
+}
+
+function renderProgress() {
+  const t = totals();
+  $('#prog-stats').innerHTML = [
+    statCard('Core modules', t.doneCount, t.coreCount, 'required for certification', 'var(--primary)'),
+    statCard('Core hours', t.hours, t.coreHours, `${t.electiveHours} more in electives`, 'var(--success)'),
+    statCard('Videos', t.videosSeen, t.videoCount, 'Hindi video lessons', 'var(--ai)'),
+    statCard('Completion', t.pct + '%', '', 'of the core track', 'var(--warn)')
+  ].join('');
+
+  $('#prog-core i').style.width = t.pct + '%';
+  $('#prog-core-txt').textContent =
+    `${t.hours} of ${t.coreHours} core hours complete. Electives add ${t.electiveHours} hours on top.`;
+  const vp = t.videoCount ? Math.round(t.videosSeen / t.videoCount * 100) : 0;
+  $('#prog-vid i').style.width = vp + '%';
+  $('#prog-vid-txt').textContent = `${t.videosSeen} of ${t.videoCount} Hindi video lessons marked watched.`;
+
+  $('#prog-time').innerHTML =
+    `The core track is <b>${t.coreHours} hours</b> — roughly <b>${Math.round(t.coreHours / t.perWeek)} weeks</b> at
+     ${t.perWeek} hrs/week, or ${Math.round(t.coreHours / 20)} weeks at 20 hrs/week. The two electives add
+     ${t.electiveHours} hours. Treat &ldquo;3–4 months&rdquo; as achievable only at 20+ hrs/week with both electives skipped.`;
+
   $('#fixes').innerHTML = DATA.corrections.map(c => `
-    <div class="fix"><span class="sev ${c.severity}">${c.severity}</span>
-      <b>${esc(c.issue)}</b><p>${esc(c.detail)}</p></div>`).join('');
+    <div class="card" style="border-left:3px solid var(--warn);margin-bottom:9px">
+      <span class="pill" style="float:right">${esc(c.severity)}</span>
+      <h3 style="margin-bottom:4px">${esc(c.issue)}</h3>
+      <p class="muted" style="margin:0;font-size:.87rem">${esc(c.detail)}</p></div>`).join('');
 }
 
-/* ------------------------------------------------------------------ events */
+function renderAll() { renderDash(); renderPath(); renderProgress(); }
+
+/* ------------------------------------------------------------------ views */
+
+function showView(id) {
+  $$('.view').forEach(v => { v.hidden = v.id !== id; });
+  $$('.nav button[data-view]').forEach(b => b.setAttribute('aria-current', String(b.dataset.view === id)));
+  scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ----------------------------------------------------------------- events */
 
 document.addEventListener('click', e => {
   const play = e.target.closest('.play');
   if (play) {
-    const frame = play.closest('.vid-frame');
-    frame.innerHTML = `<iframe src="${frame.dataset.src}" title="Course video" loading="lazy"
+    const f = play.closest('.vid-frame');
+    f.innerHTML = `<iframe src="${f.dataset.src}" title="Course video" loading="lazy"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
       referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
     return;
   }
-
   const seen = e.target.closest('.seen');
   if (seen) {
+    e.stopPropagation();
     const card = seen.closest('.vid');
     const id = card.dataset.vid;
     if (state.videos[id]) delete state.videos[id]; else state.videos[id] = true;
@@ -203,24 +266,37 @@ document.addEventListener('click', e => {
     card.classList.toggle('watched', on);
     seen.setAttribute('aria-pressed', on);
     seen.innerHTML = on ? '&#10003; Watched' : 'Mark watched';
-    persist();
-    renderStats();
+    persist(); renderDash(); renderProgress();
     return;
   }
-
   const tick = e.target.closest('.tick');
   if (tick) {
     e.stopPropagation();
-    const id = tick.closest('.mod').dataset.id;
+    const id = tick.closest('.node').dataset.id;
     if (state.modules[id]) delete state.modules[id]; else state.modules[id] = true;
-    persist();
-    render();
+    persist(); renderAll();
     return;
   }
-
-  const head = e.target.closest('.mod-head');
-  if (head) head.parentElement.classList.toggle('open');
+  const go = e.target.closest('#go-next');
+  if (go) { showView('v-modules'); const n = nextModule();
+    if (n) { const el = $(`.node[data-id="${n.id}"]`); el?.classList.add('open'); el?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    return; }
+  const card = e.target.closest('.node .card');
+  if (card && !e.target.closest('a,iframe')) card.parentElement.classList.toggle('open');
 });
+
+$$('.nav button[data-view]').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+$('#nav-trainer').addEventListener('click', () => { location.href = 'trainer.html'; });
+
+$$('#filters .pill').forEach(c => c.addEventListener('click', () => {
+  filter = c.dataset.filter;
+  $$('#filters .pill').forEach(x => {
+    const on = x === c;
+    x.setAttribute('aria-pressed', on);
+    x.classList.toggle('now', on);
+  });
+  renderPath();
+}));
 
 $('#theme').addEventListener('click', () => {
   const cur = document.documentElement.getAttribute('data-theme');
@@ -231,170 +307,114 @@ $('#theme').addEventListener('click', () => {
 });
 
 $('#export').addEventListener('click', () => {
-  const mods = DATA.modules;
+  const t = totals();
   const out = {
     exportedAt: new Date().toISOString(),
     account: cloud ? cloud.email : '(local mode — not signed in)',
     course: DATA.meta.title,
-    completedModules: mods.filter(m => state.modules[m.id]).map(m => ({ id: m.id, title: m.title, hours: m.hours })),
-    videosWatched: Object.keys(state.videos).length,
-    coreHoursCompleted: mods.filter(m => m.track === 'core' && state.modules[m.id]).reduce((a, m) => a + m.hours, 0),
-    coreHoursTotal: mods.filter(m => m.track === 'core').reduce((a, m) => a + m.hours, 0)
+    completedModules: DATA.modules.filter(m => state.modules[m.id]).map(m => ({ id: m.id, title: m.title, hours: m.hours })),
+    videosWatched: t.videosSeen, videosTotal: t.videoCount,
+    coreHoursCompleted: t.hours, coreHoursTotal: t.coreHours
   };
-  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
   a.download = `progress-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  a.click(); URL.revokeObjectURL(a.href);
 });
 
-document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
-  filter = c.dataset.filter;
-  document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === c));
-  render();
-}));
-
 (function initTheme() {
-  try {
-    const t = localStorage.getItem('aiwd.theme');
-    if (t) document.documentElement.setAttribute('data-theme', t);
-  } catch {}
+  try { const t = localStorage.getItem('aiwd.theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch {}
 })();
 
-/* -------------------------------------------------------------------- auth */
+/* ------------------------------------------------------------------- auth */
 
-function showGate(show) {
-  $('#gate').hidden = !show;
-  document.body.classList.toggle('locked', show);
-}
+const showGate = show => { $('#gate').hidden = !show; document.body.classList.toggle('locked', show); };
 
-function showUser(user) {
+function showUser(u) {
   const box = $('#account');
-  if (!user) { box.hidden = true; return; }
+  if (!u) { box.hidden = true; return; }
   box.hidden = false;
-  box.innerHTML = `
-    ${user.photoURL ? `<img class="avatar" src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer">` : ''}
-    <span class="who">${esc(user.displayName || user.email || 'Signed in')}</span>
-    <button class="btn" id="signout">Sign out</button>`;
+  box.innerHTML = `${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}" alt="" referrerpolicy="no-referrer">` : ''}
+    <span class="who">${esc(u.displayName || u.email)}</span>
+    <button class="icon-btn" id="signout" title="Sign out" aria-label="Sign out">&#9099;</button>`;
 }
 
 async function startAuth() {
   const [{ initializeApp }, auth, fs] = await Promise.all([
-    import(`${SDK}/firebase-app.js`),
-    import(`${SDK}/firebase-auth.js`),
-    import(`${SDK}/firebase-firestore.js`)
+    import(`${SDK}/firebase-app.js`), import(`${SDK}/firebase-auth.js`), import(`${SDK}/firebase-firestore.js`)
   ]);
-
   const app = initializeApp(FIREBASE_CONFIG);
-  const a = auth.getAuth(app);
-  const db = fs.getFirestore(app);
+  const a = auth.getAuth(app), db = fs.getFirestore(app);
   const provider = new auth.GoogleAuthProvider();
-
-  // A popup that was blocked (common on mobile and in locked-down browsers) falls back
-  // to a full-page redirect, which no popup blocker can stop.
-  const POPUP_FAILED = new Set([
-    'auth/popup-blocked', 'auth/popup-closed-by-user',
-    'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment'
-  ]);
+  const POPUP_FAILED = new Set(['auth/popup-blocked', 'auth/popup-closed-by-user',
+    'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment']);
 
   $('#signin').addEventListener('click', async () => {
     $('#gate-err').textContent = '';
-    try {
-      await auth.signInWithPopup(a, provider);
-    } catch (err) {
+    try { await auth.signInWithPopup(a, provider); }
+    catch (err) {
       if (POPUP_FAILED.has(err.code)) {
         $('#gate-err').textContent = 'Popup blocked — redirecting you to Google…';
-        try {
-          await auth.signInWithRedirect(a, provider);
-          return;
-        } catch (err2) {
-          $('#gate-err').textContent = `Sign-in failed: ${err2.message}`;
-          return;
-        }
+        try { await auth.signInWithRedirect(a, provider); return; }
+        catch (e2) { $('#gate-err').textContent = `Sign-in failed: ${e2.message}`; return; }
       }
       $('#gate-err').textContent = err.code === 'auth/unauthorized-domain'
-        ? 'This domain is not in the Firebase authorised-domains list. Add it in Authentication → Settings → Authorised domains.'
+        ? 'This domain is not in the Firebase authorised-domains list.'
         : `Sign-in failed: ${err.message}`;
     }
   });
 
-  // Completes a redirect-based sign-in when the user lands back on the page.
   auth.getRedirectResult(a).catch(err => {
     if (err.code !== 'auth/no-auth-event') console.error('Redirect sign-in:', err);
   });
 
   auth.onAuthStateChanged(a, async user => {
-    if (!user) {
-      cloud = null;
-      showUser(null);
-      showGate(true);
-      return;
-    }
-
-    cloud = {
-      db, uid: user.uid, email: user.email, displayName: user.displayName,
-      doc: fs.doc, setDoc: fs.setDoc
-    };
-
-    // Merge whatever is already in this browser with what is in the account,
-    // so ticking things before signing in is never lost.
+    if (!user) { cloud = null; showUser(null); showGate(true); return; }
+    cloud = { db, uid: user.uid, email: user.email, displayName: user.displayName,
+              photoURL: user.photoURL, doc: fs.doc, setDoc: fs.setDoc };
     try {
       const snap = await fs.getDoc(fs.doc(db, 'progress', user.uid));
       const remote = snap.exists() ? snap.data() : { modules: {}, videos: {} };
-      const merged = mergeProgress(remote, readLocal());
-      const changed = JSON.stringify(merged) !== JSON.stringify({
-        modules: remote.modules || {}, videos: remote.videos || {}
-      });
-      state = merged;
-      writeLocal();
-      showUser(user);
-      showGate(false);
-      render();
+      const merged = merge(remote, readLocal());
+      const changed = JSON.stringify(merged) !==
+        JSON.stringify({ modules: remote.modules || {}, videos: remote.videos || {} });
+      state = merged; writeLocal();
+      showUser(user); showGate(false); renderAll();
       if (changed) persist(); else setSync('saved');
     } catch (err) {
       console.error('Could not load cloud progress:', err);
       setSync('error', err.message);
-      showUser(user);
-      showGate(false);
-      render();
+      showUser(user); showGate(false); renderAll();
     }
-
-    const out = $('#signout');
-    if (out) out.addEventListener('click', () => auth.signOut(a));
+    $('#signout')?.addEventListener('click', () => auth.signOut(a));
   });
 }
 
-/* -------------------------------------------------------------------- boot */
+/* ------------------------------------------------------------------- boot */
 
 fetch('data/curriculum.json')
-  .catch(err => {
-    $('#modules').innerHTML = `<p style="color:var(--accent)">Could not load <code>data/curriculum.json</code> &mdash; ${esc(err.message)}. Serve this page over HTTP: <code>python3 -m http.server</code></p>`;
-    throw err;
-  })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(async d => {
     DATA = d;
-    $('#updated').textContent = d.meta.updated;
     state = readLocal();
-    renderFixes();
-
+    const t = totals();
+    $('#term-line').textContent =
+      `→ ${d.modules.length} modules · ${t.videoCount} video lessons · 2 projects`;
+    renderAll();
     if (isConfigured(FIREBASE_CONFIG)) {
       showGate(true);
-      render();
-      try {
-        await startAuth();
-      } catch (err) {
+      try { await startAuth(); }
+      catch (err) {
         console.error('Firebase failed to load:', err);
         $('#gate-err').textContent = 'Could not reach Google sign-in. Continuing in local mode.';
-        showGate(false);
-        setSync('local');
+        showGate(false); setSync('local'); $('#setup-note').hidden = false;
       }
     } else {
-      showGate(false);
-      setSync('local');
-      $('#setup-note').hidden = false;
-      render();
+      showGate(false); setSync('local'); $('#setup-note').hidden = false;
     }
   })
-  .catch(err => console.error('Boot failed:', err));
+  .catch(err => {
+    console.error('Boot failed:', err);
+    document.querySelector('main').insertAdjacentHTML('afterbegin',
+      `<div class="callout warn"><b>Could not load the curriculum.</b> ${esc(err.message)} — serve this page over HTTP.</div>`);
+  });
