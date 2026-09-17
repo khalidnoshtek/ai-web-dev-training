@@ -18,6 +18,7 @@ let DATA = null;
 let filter = 'all';
 let state = { modules: {}, videos: {}, quizzes: {}, certifiedAt: null };
 let QUIZ = null;   // { meta, quizzes }
+let BRIEFS = null; // { meta, briefs }
 let cloud = null;
 let saveTimer = null;
 
@@ -174,6 +175,7 @@ function moduleHTML(m, i) {
       <div class="detail">
         ${m.warning ? `<div class="callout warn" style="margin-bottom:6px"><b>Correction from the source research:</b> ${esc(m.warning)}</div>` : ''}
         <h4>Topics</h4><ul>${m.topics.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+        ${briefFor(m.id) ? briefHTML(briefFor(m.id)) : ''}
         ${vids.length ? `<h4>Watch here &mdash; Hindi</h4><div class="vids">${vids.map(videoHTML).join('')}</div>` : ''}
         ${docs.length ? `<h4>Reference docs (open externally)</h4><ul class="docs">${docs.map(r => `
           <li><span class="lang ${r.lang}">${r.lang.toUpperCase()}</span>
@@ -266,6 +268,50 @@ function renderProgress() {
 }
 
 
+
+
+/* --------------------------------------------------------- client briefs */
+
+const briefFor = id => (BRIEFS && BRIEFS.briefs[String(id)]) || null;
+
+/* The learner sees the client's own words and the requirements. The trainer's
+   key — ambiguities, withheld facts and the rubric — is NOT rendered here; it
+   lives on the trainer dashboard. */
+function briefHTML(b) {
+  const list = (h, arr) => arr && arr.length
+    ? `<h4>${h}</h4><ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+
+  return `<div class="brief">
+    <div class="brief-head">
+      <span class="pill now">Client brief</span>
+      <b>${esc(b.client)}</b>
+      <span>${esc(b.sector)}</span>
+    </div>
+
+    <div class="mail">
+      <div class="mail-h">
+        <span class="mail-from">${esc(b.contact)}</span>
+        <span class="mail-sub">Subject: ${esc(b.email.subject)}</span>
+      </div>
+      ${b.email.body.map(l => `<p>${esc(l)}</p>`).join('')}
+    </div>
+
+    ${list('Attached to the email', b.attachments)}
+    ${list('Must have', b.mustHave)}
+    ${list('Nice to have', b.niceToHave)}
+    ${list('Explicitly out of scope', b.outOfScope)}
+    ${list('Constraints', b.constraints)}
+    ${list('What you hand over', b.deliverables)}
+
+    <div class="callout ai" style="margin-top:14px">
+      <b>Before you write any code:</b> this brief is incomplete on purpose, and parts of it
+      contradict each other. Read it as a real client wrote it, list what you would need to ask,
+      and ask your trainer. Questions asked before building are marked; assumptions made
+      silently are marked too.
+      <span class="brief-note">${esc(b.budgetTime)}</span>
+    </div>
+  </div>`;
+}
 
 /* ----------------------------------------------------------------- quiz */
 
@@ -591,11 +637,13 @@ async function startAuth() {
 
 Promise.all([
   fetch('data/curriculum.json').then(r => { if (!r.ok) throw new Error('curriculum HTTP ' + r.status); return r.json(); }),
-  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null)
+  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null),
+  fetch('data/briefs.json').then(r => r.ok ? r.json() : null).catch(() => null)
 ])
-  .then(async ([d, qz]) => {
+  .then(async ([d, qz, br]) => {
     DATA = d;
     QUIZ = qz;
+    BRIEFS = br;
     hydrateIcons();
     state = readLocal();
     const t = totals();

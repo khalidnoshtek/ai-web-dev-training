@@ -8,6 +8,8 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 let DATA = null;
+let QUIZ = null;
+let BRIEFS = null;
 let rows = [];
 let ctx = null;   // { db, fs, auth, a }
 
@@ -27,6 +29,12 @@ function summarise(doc) {
   const { core, coreHours, coreCount, videoCount } = courseTotals();
   const mods = doc.modules || {};
   const vids = doc.videos || {};
+  const qz = doc.quizzes || {};
+  const quizModules = QUIZ ? DATA.modules.filter(m => QUIZ.quizzes[String(m.id)]) : [];
+  const taken = quizModules.filter(m => qz[String(m.id)]);
+  const passedQ = quizModules.filter(m => qz[String(m.id)]?.passed);
+  const avgQ = taken.length
+    ? Math.round(taken.reduce((a, m) => a + (qz[String(m.id)].best || 0), 0) / taken.length) : null;
   const doneCore = core.filter(m => mods[m.id]);
   const hours = doneCore.reduce((a, m) => a + m.hours, 0);
   const allDone = DATA.modules.filter(m => mods[m.id]);
@@ -44,7 +52,13 @@ function summarise(doc) {
     videos: Object.keys(vids).length,
     videoCount,
     updated: doc.updatedAt || '',
-    mods
+    certifiedAt: doc.certifiedAt || '',
+    mods, qz,
+    quizTotal: quizModules.length,
+    quizTaken: taken.length,
+    quizPassed: passedQ.length,
+    quizAvg: avgQ,
+    quizAttempts: Object.values(qz).reduce((a, v) => a + (v.attempts || 0), 0)
   };
 }
 
@@ -58,6 +72,34 @@ function ago(iso) {
   return `${Math.round(d / 86400)} days ago`;
 }
 
+
+/* ------------------------------------------------- capstone marking keys */
+
+function renderKeys() {
+  const host = $('#keys');
+  if (!host) return;
+  if (!BRIEFS) { host.innerHTML = '<p class="muted">No briefs file found.</p>'; return; }
+
+  host.innerHTML = Object.entries(BRIEFS.briefs).map(([id, b]) => `
+    <div class="key">
+      <h4>Module ${esc(id)} — ${esc(b.title)}</h4>
+      <p class="muted" style="margin:0 0 4px;font-size:.85rem">
+        <b>${esc(b.client)}</b> · ${esc(b.sector)} · ${esc(b.budgetTime)}</p>
+
+      <h4>What they must surface before coding</h4>
+      <ul>${b.ambiguities.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+
+      <h4>Facts to release only on being asked</h4>
+      <dl>${Object.entries(b.facts).map(([k, v]) =>
+        `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+
+      <h4>Rubric</h4>
+      <div class="rub">${b.rubric.map(r =>
+        `<div class="rub-row"><b>${esc(r.area)}</b><span class="rub-w">${r.weight}%</span>
+         <span>${esc(r.criteria)}</span></div>`).join('')}</div>
+    </div>`).join('');
+}
+
 /* ------------------------------------------------------------------- render */
 
 function renderSummary() {
@@ -67,6 +109,10 @@ function renderSummary() {
   const active = rows.filter(r => r.updated &&
     Date.now() - new Date(r.updated).getTime() < 7 * 864e5).length;
   const finished = rows.filter(r => r.modulesDone === r.modulesTotal).length;
+  const withQ = rows.filter(r => r.quizAvg !== null);
+  const quizAvg = withQ.length
+    ? Math.round(withQ.reduce((a, r) => a + r.quizAvg, 0) / withQ.length) : null;
+  const quizPassedTotal = rows.reduce((a, r) => a + r.quizPassed, 0);
 
   const card = (k, v, sub, colour) =>
     `<div class="card stat"><div class="k">${k}<i style="background:${colour}"></i></div>
@@ -76,8 +122,26 @@ function renderSummary() {
     card('Learners', n, 'signed in at least once', 'var(--primary)'),
     card('Average core progress', avg + '%', `of ${coreHours} curriculum hours`, 'var(--success)'),
     card('Active this week', active, 'touched their progress', 'var(--ai)'),
-    card('Completed core', finished, 'all core modules ticked', 'var(--warn)')
+    card('Completed core', finished, 'all core modules ticked', 'var(--warn)'),
+    card('Quiz average', quizAvg === null ? '—' : quizAvg + '%',
+         `${quizPassedTotal} quizzes passed across the cohort`, 'var(--brand)')
   ].join('');
+}
+
+function quizGrid(r) {
+  if (!QUIZ) return '';
+  const rows = DATA.modules.filter(m => QUIZ.quizzes[String(m.id)]);
+  if (!rows.length) return '';
+  return `<div class="qgrid">${rows.map(m => {
+    const sc = r.qz[String(m.id)];
+    const cls = !sc ? '' : sc.passed ? 'pass' : 'fail';
+    const label = sc ? `${String(m.id).padStart(2, '0')} ${sc.best}%`
+                     : `${String(m.id).padStart(2, '0')} —`;
+    const title = sc
+      ? `${m.title} — best ${sc.best}%, ${sc.attempts} attempt${sc.attempts === 1 ? '' : 's'}`
+      : `${m.title} — not attempted`;
+    return `<span class="qchip ${cls}" title="${esc(title)}">${label}</span>`;
+  }).join('')}</div>`;
 }
 
 function learnerHTML(r) {
@@ -99,10 +163,13 @@ function learnerHTML(r) {
       <div class="l-num"><b>${r.modulesDone}/${r.modulesTotal}</b><small>modules</small></div>
       <div class="l-num"><b>${r.hours}</b><small>hours</small></div>
       <div class="l-num"><b>${r.videos}/${r.videoCount}</b><small>videos</small></div>
+      <div class="l-num"><b>${r.quizAvg === null ? '—' : r.quizAvg + '%'}</b><small>quiz avg</small></div>
+      <div class="l-num"><b>${r.quizPassed}/${r.quizTotal}</b><small>quizzes</small></div>
       <div class="l-when">${esc(ago(r.updated))}</div>
     </div>
     <div class="l-bar"><i style="width:${r.pct}%"></i></div>
     <div class="pips">${byTrack}</div>
+    ${quizGrid(r)}
   </article>`;
 }
 
@@ -143,10 +210,13 @@ async function loadLearners() {
 function toCSV() {
   const head = ['name', 'email', 'core_percent', 'modules_done', 'modules_total',
                 'electives_done', 'hours_done', 'hours_total', 'videos_watched',
-                'videos_total', 'last_updated'];
+                'videos_total', 'quizzes_passed', 'quizzes_total', 'quizzes_attempted',
+                'quiz_average', 'quiz_attempts_total', 'certified_at', 'last_updated'];
   const esc2 = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const body = rows.map(r => [r.name, r.email, r.pct, r.modulesDone, r.modulesTotal,
-    r.electivesDone, r.hours, r.coreHours, r.videos, r.videoCount, r.updated].map(esc2).join(','));
+    r.electivesDone, r.hours, r.coreHours, r.videos, r.videoCount,
+    r.quizPassed, r.quizTotal, r.quizTaken, r.quizAvg ?? '', r.quizAttempts,
+    r.certifiedAt, r.updated].map(esc2).join(','));
   return [head.join(','), ...body].join('\n');
 }
 
@@ -236,7 +306,12 @@ async function start() {
   });
 
   auth.onAuthStateChanged(a, user => {
-    if (!user) { showUser(null); showGate(true); return; }
+    if (!user) {
+      showUser(null);
+      showGate(true);
+      const k = $('#keys'); if (k) k.innerHTML = '';
+      return;
+    }
     showUser(user);
     showGate(false);
     if (!isAdmin(user.email)) {
@@ -249,14 +324,20 @@ async function start() {
         <a href="index.html">go to the course site</a>.</div>`;
       return;
     }
+    renderKeys();
     loadLearners();
   });
 }
 
-fetch('data/curriculum.json')
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(async d => {
+Promise.all([
+  fetch('data/curriculum.json').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
+  fetch('data/quizzes.json').then(r => r.ok ? r.json() : null).catch(() => null),
+  fetch('data/briefs.json').then(r => r.ok ? r.json() : null).catch(() => null)
+])
+  .then(async ([d, qz, br]) => {
     DATA = d;
+    QUIZ = qz;
+    BRIEFS = br;
     hydrateIcons();
     if (!isConfigured(FIREBASE_CONFIG)) {
       showGate(false);

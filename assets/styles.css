@@ -392,3 +392,43 @@ body.locked{overflow:hidden}
 .score-row.attempted .sv{color:var(--warn)}
 .score-row.untaken .sv{color:var(--text-3);font-size:.8rem;font-weight:600}
 .score-row .sgo{flex:none}
+
+/* -------------------------------------------------------------- briefs */
+.brief{border:1px solid var(--primary-line);background:var(--primary-soft);border-radius:12px;
+  padding:15px 17px;margin:18px 0 4px}
+.brief-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:13px}
+.brief-head b{font-size:.98rem;font-weight:800;letter-spacing:-.01em}
+.brief-head > span:last-child{font-size:.78rem;color:var(--text-2)}
+.mail{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;margin-bottom:6px}
+.mail-h{border-bottom:1px solid var(--border);padding-bottom:9px;margin-bottom:11px;display:grid;gap:2px}
+.mail-from{font-size:.84rem;font-weight:700}
+.mail-sub{font-size:.76rem;color:var(--text-3)}
+.mail p{margin:0 0 9px;font-size:.88rem;line-height:1.65;color:var(--text-2)}
+.mail p:last-child{margin-bottom:0}
+.brief h4{margin-top:15px}
+.brief-note{display:block;margin-top:8px;font-size:.8rem;color:var(--text-2);font-style:italic}
+
+/* trainer-only key */
+.key{border:1px solid var(--warn);background:var(--warn-soft);border-radius:12px;padding:14px 16px;margin:0 0 10px}
+.key h4{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--warn);margin:14px 0 8px}
+.key h4:first-child{margin-top:0}
+.key ul{margin:0;padding-left:19px}
+.key li{font-size:.86rem;line-height:1.6;margin:6px 0;color:var(--text)}
+.key dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.84rem}
+.key dt{font-weight:700;white-space:nowrap}
+.key dd{margin:0;color:var(--text-2)}
+.rub{display:grid;gap:6px}
+.rub-row{display:flex;align-items:baseline;gap:10px;font-size:.85rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:9px;padding:9px 12px}
+.rub-row b{flex:none;min-width:150px}
+.rub-w{flex:none;font-weight:800;color:var(--warn);font-variant-numeric:tabular-nums}
+.rub-row span{color:var(--text-2);line-height:1.5}
+
+/* trainer quiz breakdown */
+.qgrid{display:flex;gap:4px;flex-wrap:wrap;margin-top:9px}
+.qchip{font-family:var(--mono);font-size:.62rem;font-weight:700;padding:3px 7px;border-radius:7px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-3)}
+.qchip.pass{background:var(--success-soft);border-color:var(--success);color:var(--success)}
+.qchip.fail{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
