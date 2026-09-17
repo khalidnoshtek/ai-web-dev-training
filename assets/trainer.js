@@ -1,4 +1,6 @@
 import { FIREBASE_CONFIG, isConfigured } from './firebase-config.js';
+import { isAdmin } from './admins.js';
+import { icon, hydrateIcons } from './icons.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1';
 const $ = (s, r = document) => r.querySelector(s);
@@ -189,7 +191,7 @@ function showUser(user) {
   box.innerHTML = `
     ${user.photoURL ? `<img class="avatar" src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer">` : ''}
     <span class="who">${esc(user.displayName || user.email)}</span>
-    <button class="btn" id="signout">Sign out</button>`;
+    <button class="icon-btn" id="signout" title="Sign out" aria-label="Sign out">${icon('signout', 18)}</button>`;
   $('#signout').addEventListener('click', () => ctx.auth.signOut(ctx.a));
 }
 
@@ -237,6 +239,16 @@ async function start() {
     if (!user) { showUser(null); showGate(true); return; }
     showUser(user);
     showGate(false);
+    if (!isAdmin(user.email)) {
+      rows = [];
+      renderSummary();
+      $('#board').innerHTML = `<div class="callout warn">
+        <b>This account is not a trainer.</b> ${esc(user.email || '')} is not on the trainer
+        allowlist, so it cannot read learner progress. Add it to <code>trainers()</code> in
+        <code>firestore.rules</code> and redeploy, or
+        <a href="index.html">go to the course site</a>.</div>`;
+      return;
+    }
     loadLearners();
   });
 }
@@ -245,6 +257,7 @@ fetch('data/curriculum.json')
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(async d => {
     DATA = d;
+    hydrateIcons();
     if (!isConfigured(FIREBASE_CONFIG)) {
       showGate(false);
       $('#setup-note').hidden = false;

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Web Developer</title>
+<title>Noshtek Academy — AI Web Developer</title>
 <meta name="description" content="Hindi AI-assisted web development training. 21 modules from IT administrator to AI-assisted web developer, with video lessons in Hindi and the platform in English.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%234f46e5'/><text x='50' y='68' font-size='52' font-family='monospace' fill='white' text-anchor='middle'>&lt;/&gt;</text></svg>">
+<link rel="icon" type="image/svg+xml" href="assets/noshtek-logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -18,11 +18,11 @@
 <div id="gate" hidden>
   <div class="gate-card">
     <div class="gate-brand">
-      <div class="logo">&lt;/&gt;</div>
-      <span class="eyebrow">Internal training &middot; Noshtek IT</span>
+      <span class="logo"><img src="assets/noshtek-logo.svg" alt="Noshtek" width="26" height="26"></span>
+      <span class="eyebrow">Noshtek Academy</span>
     </div>
     <h1>AI Web Developer</h1>
-    <p class="gate-sub">Hindi AI-Assisted Web Development Training</p>
+    <p class="gate-sub">AI-Assisted Web Development &mdash; taught in Hindi</p>
     <p>The full path from IT administrator to AI-assisted web developer. Video lessons are taught in Hindi; the platform and the code stay in English.</p>
 
     <div class="term" style="margin-bottom:20px">
@@ -45,12 +45,12 @@
 <!-- -------------------------------------------------------------- topbar -->
 <header class="topbar">
   <div class="wrap">
-    <div class="logo">&lt;/&gt;</div>
-    <div class="wordmark">AI Web Developer<span>Hindi training &middot; Noshtek IT</span></div>
+    <span class="logo"><img src="assets/noshtek-logo.svg" alt="Noshtek" width="26" height="26"></span>
+    <div class="wordmark">Noshtek Academy<span>AI Web Developer &middot; Hindi</span></div>
     <span id="sync" class="sync"></span>
     <span id="account" class="account" hidden></span>
-    <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme">&#9681;</button>
-    <button class="icon-btn" id="export" title="Export progress" aria-label="Export progress">&#8615;</button>
+    <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme"><span data-icon="theme" data-icon-size="18"></span></button>
+    <button class="icon-btn" id="export" title="Export progress" aria-label="Export progress"><span data-icon="download" data-icon-size="18"></span></button>
   </div>
 </header>
 
@@ -69,6 +69,7 @@
       <p class="lead" id="dash-sub"></p>
     </div>
     <div id="dash-cta" style="margin-bottom:22px"></div>
+    <div id="dash-level" style="margin-bottom:13px"></div>
     <div class="grid s2" id="dash-stats" style="margin-bottom:22px"></div>
     <h2 style="margin-bottom:11px">Up next</h2>
     <div id="dash-next"></div>
@@ -109,6 +110,10 @@
       <p class="muted" style="font-size:.85rem;margin:10px 0 0" id="prog-vid-txt"></p>
     </div>
 
+    <h2 style="margin-bottom:6px">Badges</h2>
+    <p class="lead" style="margin-bottom:14px">Earned automatically from real progress &mdash; there is no way to award one without doing the work.</p>
+    <div class="badges" id="badges" style="margin-bottom:26px"></div>
+
     <h2 style="margin-bottom:11px">How long this actually takes</h2>
     <div class="card" style="margin-bottom:22px">
       <p style="margin:0;font-size:.9rem" id="prog-time"></p>
@@ -119,15 +124,62 @@
     <div id="fixes"></div>
   </section>
 
+  <!-- -------------------------------------------------------- certificate -->
+  <section class="view" id="v-cert" hidden>
+    <div class="head no-print">
+      <div class="eyebrow">Certification</div>
+      <h1>Certificate of Completion</h1>
+      <p class="lead" id="cert-lead"></p>
+    </div>
+
+    <div class="card no-print" id="cert-locked" hidden>
+      <h3 style="margin-bottom:6px">Not yet unlocked</h3>
+      <p class="muted" style="margin:0;font-size:.9rem" id="cert-locked-txt"></p>
+      <div class="track" style="margin-top:14px"><i id="cert-bar"></i></div>
+    </div>
+
+    <div id="cert-wrap" hidden>
+      <div class="cert" id="cert">
+        <div class="cert-inner">
+          <div class="cert-brand">
+            <span class="logo"><img src="assets/noshtek-logo.svg" alt="Noshtek" width="26" height="26"></span>
+            <div><b>Noshtek Academy</b><span>Certificate of Completion</span></div>
+          </div>
+          <p class="cert-pre">This is to certify that</p>
+          <p class="cert-name" id="cert-name">—</p>
+          <p class="cert-body">
+            has successfully completed the <b>AI-Assisted Web Developer</b> programme &mdash;
+            <span id="cert-detail"></span> &mdash; covering web fundamentals, HTML, CSS,
+            JavaScript, Git, prompt engineering, Claude Code, deployment, SEO and web security,
+            including two client-grade capstone projects.
+          </p>
+          <div class="cert-foot">
+            <div><b id="cert-date">—</b><span>Date of completion</span></div>
+            <div><b id="cert-id">—</b><span>Certificate ID</span></div>
+            <div><b>Noshtek Academy</b><span>Issuing body</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="no-print" style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn primary" id="cert-print">Download / print certificate</button>
+        <button class="btn" id="cert-again">Celebrate again</button>
+      </div>
+      <p class="muted no-print" style="font-size:.8rem;margin-top:10px">
+        Printing opens your browser&rsquo;s print dialog &mdash; choose &ldquo;Save as PDF&rdquo; for a shareable file.
+      </p>
+    </div>
+  </section>
+
 </main>
 
 <!-- ----------------------------------------------------------------- nav -->
 <nav class="nav">
   <div class="wrap">
-    <button data-view="v-dash" aria-current="true"><i>&#9632;</i>Dashboard</button>
-    <button data-view="v-modules" aria-current="false"><i>&#9776;</i>Modules</button>
-    <button data-view="v-progress" aria-current="false"><i>&#9650;</i>My Progress</button>
-    <button id="nav-trainer" aria-current="false"><i>&#9679;</i>Trainer</button>
+    <button data-view="v-dash" aria-current="true"><span data-icon="dashboard"></span>Dashboard</button>
+    <button data-view="v-modules" aria-current="false"><span data-icon="layers"></span>Modules</button>
+    <button data-view="v-progress" aria-current="false"><span data-icon="progress"></span>Progress</button>
+    <button data-view="v-cert" aria-current="false"><span data-icon="award"></span>Rewards</button>
+    <button id="nav-trainer" aria-current="false" hidden><span data-icon="users"></span>Trainer</button>
   </div>
 </nav>
 

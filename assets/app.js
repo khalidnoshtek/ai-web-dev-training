@@ -1,4 +1,8 @@
 import { FIREBASE_CONFIG, isConfigured } from './firebase-config.js';
+import { isAdmin } from './admins.js';
+import { confetti } from './celebrate.js';
+import { icon, hydrateIcons } from './icons.js';
+import { xpFor, levelFor, badgesFor } from './game.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1';
 const LOCAL_KEY = 'aiwd.progress.v2';
@@ -11,7 +15,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c =>
 
 let DATA = null;
 let filter = 'all';
-let state = { modules: {}, videos: {} };
+let state = { modules: {}, videos: {}, certifiedAt: null };
 let cloud = null;
 let saveTimer = null;
 
@@ -20,16 +24,19 @@ let saveTimer = null;
 function readLocal() {
   try {
     const v2 = JSON.parse(localStorage.getItem(LOCAL_KEY));
-    if (v2 && v2.modules) return { modules: v2.modules || {}, videos: v2.videos || {} };
+    if (v2 && v2.modules) return { modules: v2.modules || {}, videos: v2.videos || {},
+                                   certifiedAt: v2.certifiedAt || null };
     const v1 = JSON.parse(localStorage.getItem(LEGACY_KEY));
-    if (v1) return { modules: v1, videos: {} };
+    if (v1) return { modules: v1, videos: {}, certifiedAt: null };
   } catch {}
-  return { modules: {}, videos: {} };
+  return { modules: {}, videos: {}, certifiedAt: null };
 }
 const writeLocal = () => { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); } catch {} };
 const merge = (a, b) => ({
   modules: { ...(a.modules || {}), ...(b.modules || {}) },
-  videos: { ...(a.videos || {}), ...(b.videos || {}) }
+  videos: { ...(a.videos || {}), ...(b.videos || {}) },
+  // Keep the EARLIEST certification date across devices — the day they finished.
+  certifiedAt: [a.certifiedAt, b.certifiedAt].filter(Boolean).sort()[0] || null
 });
 
 function setSync(kind, detail = '') {
@@ -49,6 +56,7 @@ function persist() {
     try {
       await cloud.setDoc(cloud.doc(cloud.db, 'progress', cloud.uid), {
         modules: state.modules, videos: state.videos,
+        certifiedAt: state.certifiedAt || '',
         email: cloud.email || '', displayName: cloud.displayName || '',
         photoURL: cloud.photoURL || '', updatedAt: new Date().toISOString()
       }, { merge: true });
@@ -75,7 +83,8 @@ function totals() {
     pct: coreHours ? Math.round(hours / coreHours * 100) : 0,
     electiveHours: mods.filter(m => m.track === 'elective').reduce((a, m) => a + m.hours, 0),
     videoCount, videosSeen: Object.keys(state.videos).length,
-    perWeek: DATA.meta.hoursPerWeekDefault
+    perWeek: DATA.meta.hoursPerWeekDefault,
+    complete: core.length > 0 && doneCore.length === core.length
   };
 }
 
@@ -95,9 +104,9 @@ function videoHTML(r) {
     : `<div class="thumb thumb-list" aria-hidden="true"><span>Playlist</span></div>`;
   return `<div class="vid ${seen ? 'watched' : ''}" data-vid="${esc(e.id)}">
     <div class="vid-frame" data-src="${esc(embedSrc(e, true))}">${thumb}
-      <button class="play" aria-label="Play ${esc(r.title)}">&#9654;</button></div>
+      <button class="play" aria-label="Play ${esc(r.title)}">${icon('play', 18)}</button></div>
     <div class="vid-meta"><span class="lang hi">HI</span><b>${esc(r.title)}</b>
-      <button class="seen" aria-pressed="${seen}">${seen ? '&#10003; Watched' : 'Mark watched'}</button></div>
+      <button class="seen" aria-pressed="${seen}">${seen ? 'Watched' : 'Mark watched'}</button></div>
   </div>`;
 }
 
@@ -130,7 +139,7 @@ function moduleHTML(m, i) {
     : m.track === 'elective' ? '<span class="pill el">Elective</span>' : '';
 
   return `<div class="node ${done ? 'done' : ''} ${isNow ? 'now' : ''}" data-id="${m.id}">
-    <div class="dot">${done ? '&#10003;' : m.id}</div>
+    <div class="dot">${done ? icon('check', 18) : m.id}</div>
     <div class="card">
       <div class="m-top">
         <h3>${esc(m.title)}</h3>
@@ -155,7 +164,7 @@ function moduleHTML(m, i) {
         <h4>Exercises</h4><ul>${m.exercises.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
         ${m.deliverable ? `<h4>Deliverable</h4><div class="callout ok">${esc(m.deliverable)}</div>` : ''}
         <div style="margin-top:16px">
-          <button class="btn ${done ? '' : 'primary'} tick">${done ? '&#10003; Completed — undo' : 'Mark module complete'}</button>
+          <button class="btn ${done ? '' : 'primary'} tick">${done ? 'Completed — undo' : 'Mark module complete'}</button>
         </div>
       </div>
     </div>
@@ -235,7 +244,83 @@ function renderProgress() {
       <p class="muted" style="margin:0;font-size:.87rem">${esc(c.detail)}</p></div>`).join('');
 }
 
-function renderAll() { renderDash(); renderPath(); renderProgress(); }
+
+/* -------------------------------------------------------- level & badges */
+
+function gameCtx() {
+  const t = totals();
+  const electivesDone = DATA.modules.filter(m => m.track === 'elective' && state.modules[m.id]).length;
+  return { mods: state.modules, vids: t.videosSeen, videoCount: t.videoCount,
+           pct: t.pct, complete: t.complete, electivesDone };
+}
+
+function renderLevel() {
+  const xp = xpFor(DATA, state);
+  const lv = levelFor(xp);
+  $('#dash-level').innerHTML = `
+    <div class="level">
+      <div class="level-ring" style="--p:${lv.pctToNext}%"><b>${lv.n}</b></div>
+      <div class="level-txt">
+        <b>Level ${lv.n} — ${esc(lv.name)}</b>
+        <span>${lv.isMax ? 'Top level reached' :
+          `${lv.xpForNext} XP to Level ${lv.next.n} — ${esc(lv.next.name)}`}</span>
+      </div>
+      <div class="level-xp"><b>${xp.toLocaleString()}</b><span>XP</span></div>
+    </div>`;
+}
+
+function renderBadges() {
+  const list = badgesFor(gameCtx());
+  const got = list.filter(b => b.earned).length;
+  $('#badges').innerHTML = list.map(b => `
+    <div class="badge ${b.earned ? 'earned' : 'locked'}" title="${esc(b.hint)}">
+      <span class="bi">${icon(b.earned ? b.icon : 'lock', 20)}</span>
+      <b>${esc(b.name)}</b>
+      <small>${b.earned ? 'Earned' : esc(b.hint)}</small>
+    </div>`).join('');
+  const h = $('#badges').previousElementSibling;
+  if (h && h.classList.contains('lead')) {
+    h.innerHTML = `<b>${got} of ${list.length}</b> earned — awarded automatically from real progress, ` +
+                  `there is no way to get one without doing the work.`;
+  }
+}
+
+/* --------------------------------------------------------- certificate */
+
+function certId() {
+  const seed = (cloud?.uid || 'local') + (state.certifiedAt || '');
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return 'NA-' + h.toString(36).toUpperCase().padStart(7, '0').slice(0, 7);
+}
+
+function renderCert() {
+  const t = totals();
+  const done = t.complete;
+  $('#cert-locked').hidden = done;
+  $('#cert-wrap').hidden = !done;
+  $('#cert-lead').textContent = done
+    ? 'Issued by Noshtek Academy on completion of every core module.'
+    : 'Complete all core modules to unlock your certificate.';
+
+  if (!done) {
+    $('#cert-locked-txt').textContent =
+      `${t.doneCount} of ${t.coreCount} core modules complete — ${t.coreCount - t.doneCount} to go ` +
+      `(${t.coreHours - t.hours} hours remaining).`;
+    $('#cert-bar').style.width = t.pct + '%';
+    return;
+  }
+
+  const when = state.certifiedAt ? new Date(state.certifiedAt) : new Date();
+  $('#cert-name').textContent = cloud?.displayName || cloud?.email || 'Learner';
+  $('#cert-detail').textContent =
+    `${t.coreCount} core modules, ${t.coreHours} hours of study`;
+  $('#cert-date').textContent = when.toLocaleDateString('en-IN',
+    { day: 'numeric', month: 'long', year: 'numeric' });
+  $('#cert-id').textContent = certId();
+}
+
+function renderAll() { renderDash(); renderPath(); renderProgress(); renderLevel(); renderBadges(); renderCert(); }
 
 /* ------------------------------------------------------------------ views */
 
@@ -265,16 +350,27 @@ document.addEventListener('click', e => {
     const on = !!state.videos[id];
     card.classList.toggle('watched', on);
     seen.setAttribute('aria-pressed', on);
-    seen.innerHTML = on ? '&#10003; Watched' : 'Mark watched';
-    persist(); renderDash(); renderProgress();
+    seen.innerHTML = on ? 'Watched' : 'Mark watched';
+    persist(); renderDash(); renderProgress(); renderLevel(); renderBadges(); renderCert();
     return;
   }
   const tick = e.target.closest('.tick');
   if (tick) {
     e.stopPropagation();
     const id = tick.closest('.node').dataset.id;
+    const wasComplete = totals().complete;
     if (state.modules[id]) delete state.modules[id]; else state.modules[id] = true;
+
+    const nowComplete = totals().complete;
+    const justFinished = nowComplete && !wasComplete;
+    if (justFinished && !state.certifiedAt) state.certifiedAt = new Date().toISOString();
+
     persist(); renderAll();
+
+    if (justFinished) {
+      confetti();
+      showView('v-cert');
+    }
     return;
   }
   const go = e.target.closest('#go-next');
@@ -286,6 +382,8 @@ document.addEventListener('click', e => {
 });
 
 $$('.nav button[data-view]').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+$('#cert-print').addEventListener('click', () => print());
+$('#cert-again').addEventListener('click', () => confetti());
 $('#nav-trainer').addEventListener('click', () => { location.href = 'trainer.html'; });
 
 $$('#filters .pill').forEach(c => c.addEventListener('click', () => {
@@ -336,7 +434,7 @@ function showUser(u) {
   box.hidden = false;
   box.innerHTML = `${u.photoURL ? `<img class="avatar" src="${esc(u.photoURL)}" alt="" referrerpolicy="no-referrer">` : ''}
     <span class="who">${esc(u.displayName || u.email)}</span>
-    <button class="icon-btn" id="signout" title="Sign out" aria-label="Sign out">&#9099;</button>`;
+    <button class="icon-btn" id="signout" title="Sign out" aria-label="Sign out">${icon('signout', 18)}</button>`;
 }
 
 async function startAuth() {
@@ -369,15 +467,20 @@ async function startAuth() {
   });
 
   auth.onAuthStateChanged(a, async user => {
-    if (!user) { cloud = null; showUser(null); showGate(true); return; }
+    if (!user) { cloud = null; showUser(null); showGate(true); $('#nav-trainer').hidden = true; return; }
     cloud = { db, uid: user.uid, email: user.email, displayName: user.displayName,
               photoURL: user.photoURL, doc: fs.doc, setDoc: fs.setDoc };
+
+    // UI gate only. firestore.rules is what actually stops a non-trainer reading
+    // anyone else's progress — hiding a nav link is not security.
+    $('#nav-trainer').hidden = !isAdmin(user.email);
     try {
       const snap = await fs.getDoc(fs.doc(db, 'progress', user.uid));
-      const remote = snap.exists() ? snap.data() : { modules: {}, videos: {} };
+      const remote = snap.exists() ? snap.data() : { modules: {}, videos: {}, certifiedAt: null };
       const merged = merge(remote, readLocal());
-      const changed = JSON.stringify(merged) !==
-        JSON.stringify({ modules: remote.modules || {}, videos: remote.videos || {} });
+      const changed = JSON.stringify(merged) !== JSON.stringify({
+        modules: remote.modules || {}, videos: remote.videos || {},
+        certifiedAt: remote.certifiedAt || null });
       state = merged; writeLocal();
       showUser(user); showGate(false); renderAll();
       if (changed) persist(); else setSync('saved');
@@ -396,6 +499,7 @@ fetch('data/curriculum.json')
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(async d => {
     DATA = d;
+    hydrateIcons();
     state = readLocal();
     const t = totals();
     $('#term-line').textContent =

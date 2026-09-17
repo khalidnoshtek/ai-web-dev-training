@@ -1,4 +1,4 @@
-# AI-Assisted Web Developer — training programme
+# Noshtek Academy — AI Web Developer
 
 A 21-module curriculum that takes an IT administrator to the point of being able to plan,
 build, deploy and maintain modern websites with AI assistance.
@@ -105,9 +105,45 @@ message rather than an empty page.
 
 ## Design
 
-The interface follows the **AI Web Developer** LMS design artifact: Plus Jakarta Sans for UI,
-Hind for Devanagari, JetBrains Mono for code, indigo primary, 14px cards and 20px pills, with
-the learning-path timeline, stat cards and bottom navigation from that design.
+Layout and components come from the **AI Web Developer** LMS design artifact (Plus Jakarta Sans
+for UI, Hind for Devanagari, JetBrains Mono for code, 14px cards, 20px pills, learning-path
+timeline, stat cards, bottom navigation), re-skinned in **Noshtek brand colours** taken from
+noshtek.com: `#ff8e01` primary, `#ff5200` deep, `#ffb347` light, pure black surfaces, with the
+Noshtek logo mark.
+
+Icons are a self-contained monochrome line set in `assets/icons.js` — inline SVG on
+`currentColor`, no emoji and no icon-font CDN.
+
+## Gamification
+
+`assets/game.js` computes XP, levels and badges **from real progress only** — hours from ticked
+modules (10 XP/hour) and watched videos (20 XP each). There is no way to award a badge without
+doing the work, and nothing gamified is stored as independent state that could drift from the
+learning path.
+
+- **8 levels**, Newcomer through Web Developer, with a ring showing progress to the next
+- **18 badges**, each a declarative test against real progress
+- On finishing every core module: confetti (brand colours only, and skipped entirely under
+  `prefers-reduced-motion`) and the certificate unlocks
+
+## Certificate
+
+Issued by **Noshtek Academy** on completion of all core modules. Carries the learner's name,
+module and hour count, completion date and a certificate ID derived from their uid. Print styles
+are included, so "Download / print" → Save as PDF gives a shareable file.
+
+The completion date is stored as `certifiedAt` on the progress document and the **earliest**
+date wins when merging across devices, so the certificate always shows the day they actually
+finished.
+
+## Admin access
+
+`assets/admins.js` controls whether the Trainer link is shown. That is **UI only** — the real
+enforcement is `trainers()` in `firestore.rules`. Keep the two in sync and redeploy:
+
+```bash
+firebase deploy --only firestore:rules
+```
 
 Screens in the design that are **not** built, because there is no data behind them: streaks,
 the quiz engine and scores, AI challenges, badges/certification, the prompt library and the
